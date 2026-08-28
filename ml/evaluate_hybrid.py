@@ -9,7 +9,6 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend" / "lambda"))
 
 from ml_predictor import predict_risk
-from risk_engine import classify
 from rules import evaluate_rules
 from url_analyzer import analyze_url
 
@@ -88,7 +87,9 @@ def evaluate(rows):
         components = {"ml": ml_score, "rules": rule_score, "url": url_score}
         scores["rule_only"].append(rule_score)
         scores["ml_only"].append(ml_score)
-        scores["ml_rules"].append(weighted_score(components, {"ml": ML_WEIGHT, "rules": RULE_WEIGHT}))
+        scores["ml_rules"].append(
+            weighted_score(components, {"ml": ML_WEIGHT, "rules": RULE_WEIGHT})
+        )
         active_weights = {"ml": ML_WEIGHT, "rules": RULE_WEIGHT}
         if url:
             active_weights["url"] = URL_WEIGHT
