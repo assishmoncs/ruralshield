@@ -1,0 +1,48 @@
+name: CI
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12', cache: pip}
+      - run: python -m pip install --upgrade pip
+      - run: pip install -r backend/requirements.txt pytest ruff
+      - name: Secret leak guard
+        shell: bash
+        run: |
+          if git grep -nE 'AKIA[0-9A-Z]{16}|aws_secret_access_key[[:space:]]*=|-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----' -- ':!docs/**'; then
+            echo 'Potential committed secret detected.'
+            exit 1
+          fi
+      - run: ruff check backend/lambda ml tests
+      - name: Reproduce ML artifacts
+        run: |
+          python ml/train.py
+          python ml/evaluate_hybrid.py
+          git diff --exit-code -- backend/lambda/model.json ml/evaluation.json ml/hybrid_evaluation.json
+      - run: pytest -q
+      - name: Compile Python
+        run: python -m compileall -q backend/lambda ml
+      - name: Verify frontend assets and JavaScript
+        run: |
+          test -s frontend/index.html
+          test -s frontend/styles.css
+          test -s frontend/app.js
+          node --check frontend/app.js
+      - name: Install SAM CLI
+        uses: aws-actions/setup-sam@v2
+      - name: Validate SAM template
+        run: sam validate --lint -t infrastructure/template.yaml
+      - name: Build SAM package
+        run: sam build -t infrastructure/template.yaml
+      - name: Verify Lambda package contents
+        run: |
+          test -s .aws-sam/build/ScanFunction/handler.py
+          test -s .aws-sam/build/ScanFunction/model.json
+          test -s .aws-sam/build/ScanFunction/risk_engine.py

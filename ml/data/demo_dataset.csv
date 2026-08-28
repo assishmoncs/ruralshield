@@ -1,0 +1,41 @@
+text,label
+"Your account statement for July is now available in the official mobile banking app.",safe
+"₹850 was debited from your account at CITY MART. If this was not you call the number printed on your card.",safe
+"Your monthly balance notification is ready. Sign in through the bank app you already use.",safe
+"Security reminder: our bank will never ask for OTP PIN or password by phone or message.",safe
+"NEFT transfer of ₹1200 was credited to your account. Reference 482910.",safe
+"Your fixed deposit interest has been credited. View details in your official banking app.",safe
+"Scheduled maintenance is planned tonight. Digital banking may be unavailable for 20 minutes.",safe
+"Your cheque request has been received and is being processed.",safe
+"ATM withdrawal of ₹2000 completed. Contact the official bank helpline from the back of your card for disputes.",safe
+"Dear customer your savings account balance is ₹18450 as of today.",safe
+"UPI payment of ₹240 to grocery store was successful. No action is required.",safe
+"Your debit card replacement request has been completed. Collect it from your registered branch.",safe
+"Interest certificate for the financial year can be downloaded from the official bank portal.",safe
+"A new beneficiary was added from your logged in banking session. Remove it using the official app if this was not you.",safe
+"Your bank branch will remain closed on the public holiday. Digital services remain available.",safe
+"Transaction alert: ₹99 paid to mobile recharge service. Reference number 22019.",safe
+"Your recurring deposit installment was received successfully.",safe
+"The bank has updated its privacy notice. Read it inside the official app.",safe
+"Your account nominee update request is pending branch verification. Please visit the branch with identification.",safe
+"Your loan EMI of ₹6500 was received. Thank you.",safe
+"KYC update required immediately or your account will be blocked. Click http://sbi-kyc-verify.example and enter OTP.",phishing
+"URGENT: Your HDFC account is suspended. Verify now at http://hdfc-secure-login.example and share OTP.",phishing
+"Congratulations you won ₹500000 lottery reward. Pay ₹999 processing fee by UPI to claim now.",phishing
+"Refund pending from your bank. Click http://refund-bank.example and enter card number CVV and PIN.",phishing
+"Your UPI account will expire today. Send your UPI PIN to customer care for reactivation.",phishing
+"Pre-approved instant loan ₹200000. Pay ₹1499 file charge now to release funds.",phishing
+"Bank officer here. Your account will be frozen in 30 minutes unless you send OTP immediately.",phishing
+"RBI verification required. Login at http://rbi-account-verify.example with netbanking password.",phishing
+"Fake support team: share screen and tell us the OTP received to cancel an unauthorized payment.",phishing
+"Account KYC expired. Complete re-KYC at http://secure-axis-kyc.example to avoid deactivation.",phishing
+"Cashback of ₹4500 waiting. Claim at http://upi-cashback.example and enter UPI PIN.",phishing
+"Your card has been blocked. Customer care needs card number expiry date and CVV to unblock it.",phishing
+"SBI reward points worth ₹8000 expire today. Click http://sbi-reward-claim.example immediately.",phishing
+"Canara Bank security check. Verify your account password now at http://canara-secure-verify.example.",phishing
+"Loan approved without documents. Transfer ₹2500 insurance fee first to receive money.",phishing
+"Payment failed and refund is pending. Enter your PIN at http://instant-refund.example.",phishing
+"Your account has unusual activity. Reply with OTP to stop suspension.",phishing
+"KYC department calling: send Aadhaar details card number and OTP to keep account active.",phishing
+"You have won a government banking reward. Pay tax by UPI before midnight to claim.",phishing
+"Official bank support: install remote access app and provide the code so we can fix your account.",phishing

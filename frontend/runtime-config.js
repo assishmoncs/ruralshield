@@ -1,0 +1,1 @@
+window.RURALSHIELD_API_URL = window.RURALSHIELD_API_URL || '';

@@ -1,0 +1,44 @@
+{
+  "validation": {
+    "accuracy": 0.8333,
+    "precision_phishing": 1.0,
+    "recall_phishing": 0.6667,
+    "f1_phishing": 0.8,
+    "precision_safe": 0.75,
+    "recall_safe": 1.0,
+    "f1_safe": 0.8571,
+    "confusion_matrix": {
+      "tn": 3,
+      "fp": 0,
+      "fn": 1,
+      "tp": 2
+    }
+  },
+  "test": {
+    "accuracy": 0.8333,
+    "precision_phishing": 1.0,
+    "recall_phishing": 0.6667,
+    "f1_phishing": 0.8,
+    "precision_safe": 0.75,
+    "recall_safe": 1.0,
+    "f1_safe": 0.8571,
+    "confusion_matrix": {
+      "tn": 3,
+      "fp": 0,
+      "fn": 1,
+      "tp": 2
+    }
+  },
+  "dataset_rows": 40,
+  "class_distribution": {
+    "safe": 20,
+    "phishing": 20
+  },
+  "split": {
+    "train": 28,
+    "validation": 6,
+    "test": 6,
+    "seed": 42
+  },
+  "note": "Metrics are for the bundled synthetic/demo dataset only; they are not a production phishing benchmark."
+}
