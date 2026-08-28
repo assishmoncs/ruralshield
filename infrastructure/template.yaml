@@ -8,6 +8,7 @@ Parameters:
   BedrockModelId:
     Type: String
     Default: amazon.nova-lite-v1:0
+
 Globals:
   Function:
     Runtime: python3.12
@@ -19,7 +20,9 @@ Globals:
         TABLE_NAME: !Ref ScanTable
         BEDROCK_MODEL_ID: !Ref BedrockModelId
         ALLOWED_ORIGINS: !Ref AllowedOrigin
+        AWS_REGION: !Ref AWS::Region
         LOG_LEVEL: INFO
+
 Resources:
   RuralShieldApi:
     Type: AWS::Serverless::HttpApi
@@ -29,9 +32,48 @@ Resources:
         AllowHeaders: [Content-Type, Authorization]
         AllowMethods: [GET, POST, OPTIONS]
         MaxAge: 600
+      Auth:
+        Authorizers:
+          CognitoJwtAuthorizer:
+            IdentitySource: $request.header.Authorization
+            JwtConfiguration:
+              issuer: !Sub https://cognito-idp.${AWS::Region}.${AWS::URLSuffix}/${CognitoUserPool}
+              audience:
+                - !Ref CognitoUserPoolClient
       DefaultRouteSettings:
         ThrottlingBurstLimit: 20
         ThrottlingRateLimit: 10
+
+  CognitoUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub ${AWS::StackName}-users
+      UsernameAttributes:
+        - email
+      AutoVerifiedAttributes:
+        - email
+      PasswordPolicy:
+        MinimumLength: 8
+        RequireUppercase: true
+        RequireLowercase: true
+        RequireNumbers: true
+        RequireSymbols: true
+      AccountRecoverySetting:
+        RecoveryMechanisms:
+          - Name: verified_email
+            Priority: 1
+
+  CognitoUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub ${AWS::StackName}-web-client
+      UserPoolId: !Ref CognitoUserPool
+      GenerateSecret: false
+      PreventUserExistenceErrors: ENABLED
+      ExplicitAuthFlows:
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+
   ScanFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -53,16 +95,33 @@ Resources:
       Events:
         Scan:
           Type: HttpApi
-          Properties: {ApiId: !Ref RuralShieldApi, Path: /scan, Method: POST}
+          Properties:
+            ApiId: !Ref RuralShieldApi
+            Path: /scan
+            Method: POST
         History:
           Type: HttpApi
-          Properties: {ApiId: !Ref RuralShieldApi, Path: /history, Method: GET}
+          Properties:
+            ApiId: !Ref RuralShieldApi
+            Path: /history
+            Method: GET
+            Auth:
+              Authorizer: CognitoJwtAuthorizer
         Statistics:
           Type: HttpApi
-          Properties: {ApiId: !Ref RuralShieldApi, Path: /statistics, Method: GET}
+          Properties:
+            ApiId: !Ref RuralShieldApi
+            Path: /statistics
+            Method: GET
+            Auth:
+              Authorizer: CognitoJwtAuthorizer
         Health:
           Type: HttpApi
-          Properties: {ApiId: !Ref RuralShieldApi, Path: /health, Method: GET}
+          Properties:
+            ApiId: !Ref RuralShieldApi
+            Path: /health
+            Method: GET
+
   ScanFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Delete
@@ -70,6 +129,7 @@ Resources:
     Properties:
       LogGroupName: !Sub /aws/lambda/${ScanFunction}
       RetentionInDays: 14
+
   ScanTable:
     Type: AWS::DynamoDB::Table
     DeletionPolicy: Retain
@@ -84,6 +144,7 @@ Resources:
         - {AttributeName: scan_key, KeyType: RANGE}
       SSESpecification: {SSEEnabled: true}
       PointInTimeRecoverySpecification: {PointInTimeRecoveryEnabled: true}
+
   FrontendBucket:
     Type: AWS::S3::Bucket
     DeletionPolicy: Retain
@@ -99,6 +160,7 @@ Resources:
           - ServerSideEncryptionByDefault: {SSEAlgorithm: AES256}
       OwnershipControls:
         Rules: [{ObjectOwnership: BucketOwnerEnforced}]
+
   FrontendOriginAccessControl:
     Type: AWS::CloudFront::OriginAccessControl
     Properties:
@@ -108,6 +170,7 @@ Resources:
         OriginAccessControlOriginType: s3
         SigningBehavior: always
         SigningProtocol: sigv4
+
   FrontendDistribution:
     Type: AWS::CloudFront::Distribution
     Properties:
@@ -136,6 +199,7 @@ Resources:
             ResponsePagePath: /index.html
             ErrorCachingMinTTL: 0
         ViewerCertificate: {CloudFrontDefaultCertificate: true}
+
   FrontendBucketPolicy:
     Type: AWS::S3::BucketPolicy
     Properties:
@@ -151,6 +215,7 @@ Resources:
             Condition:
               StringEquals:
                 AWS:SourceArn: !Sub arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${FrontendDistribution}
+
 Outputs:
   ApiUrl:
     Value: !Sub https://${RuralShieldApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}
@@ -162,3 +227,9 @@ Outputs:
     Value: !Sub https://${FrontendDistribution.DomainName}
   ScanTableName:
     Value: !Ref ScanTable
+  CognitoUserPoolId:
+    Value: !Ref CognitoUserPool
+  CognitoUserPoolClientId:
+    Value: !Ref CognitoUserPoolClient
+  CognitoRegion:
+    Value: !Ref AWS::Region
