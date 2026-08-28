@@ -42,7 +42,7 @@ MITIGATING_PATTERNS = [
 
 def _term_is_negated(text: str, term_pattern: str) -> bool:
     for match in re.finditer(rf"\b{term_pattern}\b", text, re.IGNORECASE):
-        context = text[max(0, match.start() - 45):match.start()].lower()
+        context = text[max(0, match.start() - 60):match.start()].lower()
         if re.search(r"\b(?:never|do not|don't|dont|will never|will not)\b", context):
             return True
     return False
@@ -50,29 +50,32 @@ def _term_is_negated(text: str, term_pattern: str) -> bool:
 
 def evaluate_rules(text: str):
     lowered = (text or "").lower()
-    hits = []
-    for rule_id, pattern, reason, severity, contribution in RULES:
-        if re.search(pattern, lowered, re.IGNORECASE | re.DOTALL):
-            hits.append(RuleHit(rule_id, reason, severity, contribution))
-
-    if _term_is_negated(text or "", OTP_TERM):
-        hits = [hit for hit in hits if hit.rule_id != "OTP_REQUEST"]
-    if _term_is_negated(text or "", PIN_TERM):
-        hits = [hit for hit in hits if hit.rule_id != "PIN_REQUEST"]
-    if _term_is_negated(text or "", PASSWORD_TERM):
-        hits = [hit for hit in hits if hit.rule_id != "PASSWORD_REQUEST"]
-    if _term_is_negated(text or "", CREDENTIAL_TERM):
-        hits = [hit for hit in hits if hit.rule_id != "CREDENTIAL_REQUEST"]
-
-    if URL_RE.search(text or ""):
-        hits.append(RuleHit("CONTAINS_URL", "Contains a URL that should be checked", "low", 5))
-
     mitigating_hits = []
     mitigation = 0
     for rule_id, pattern, reason, contribution in MITIGATING_PATTERNS:
         if re.search(pattern, lowered, re.IGNORECASE | re.DOTALL):
             mitigating_hits.append(RuleHit(rule_id, reason, "mitigating", contribution))
             mitigation += contribution
+
+    hits = []
+    for rule_id, pattern, reason, severity, contribution in RULES:
+        if re.search(pattern, lowered, re.IGNORECASE | re.DOTALL):
+            hits.append(RuleHit(rule_id, reason, severity, contribution))
+
+    if any(hit.rule_id == "SECURITY_AWARENESS" for hit in mitigating_hits):
+        hits = [hit for hit in hits if hit.rule_id not in REQUEST_RULE_IDS]
+    else:
+        if _term_is_negated(text or "", OTP_TERM):
+            hits = [hit for hit in hits if hit.rule_id != "OTP_REQUEST"]
+        if _term_is_negated(text or "", PIN_TERM):
+            hits = [hit for hit in hits if hit.rule_id != "PIN_REQUEST"]
+        if _term_is_negated(text or "", PASSWORD_TERM):
+            hits = [hit for hit in hits if hit.rule_id != "PASSWORD_REQUEST"]
+        if _term_is_negated(text or "", CREDENTIAL_TERM):
+            hits = [hit for hit in hits if hit.rule_id != "CREDENTIAL_REQUEST"]
+
+    if URL_RE.search(text or ""):
+        hits.append(RuleHit("CONTAINS_URL", "Contains a URL that should be checked", "low", 5))
 
     raw_score = sum(hit.contribution for hit in hits)
     score = max(0, min(100, raw_score - min(20, mitigation)))
