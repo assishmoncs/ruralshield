@@ -20,7 +20,9 @@ def event(method, path, headers=None, body=None):
 
 def authenticated_event(method, path, subject="user-123", headers=None, body=None):
     request = event(method, path, headers, body)
-    request["requestContext"]["authorizer"] = {"jwt": {"claims": {"sub": subject}}}
+    request["requestContext"]["authorizer"] = {
+        "jwt": {"claims": {"sub": subject, "token_use": "id"}}
+    }
     return request
 
 
@@ -55,6 +57,14 @@ def test_jwt_subject_is_only_private_owner_identity():
         "GET", "/history", headers={"x-ruralshield-client-id": CLIENT_ID}
     )
     assert handler._owner_id(request) == "user#user-123"
+
+
+def test_api_ignores_access_token_claim_for_private_identity():
+    request = event("GET", "/history")
+    request["requestContext"]["authorizer"] = {
+        "jwt": {"claims": {"sub": "user-123", "token_use": "access"}}
+    }
+    assert handler._owner_id(request) == "anonymous"
 
 
 def test_anonymous_scan_remains_allowed_but_is_not_persisted(monkeypatch):
