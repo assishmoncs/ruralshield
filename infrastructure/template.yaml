@@ -8,6 +8,11 @@ Parameters:
   BedrockModelId:
     Type: String
     Default: amazon.nova-lite-v1:0
+  BedrockPublicAccess:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: Allow anonymous scans to invoke paid Bedrock inference. Keep false for safer demos.
 
 Globals:
   Function:
@@ -19,6 +24,7 @@ Globals:
       Variables:
         TABLE_NAME: !Ref ScanTable
         BEDROCK_MODEL_ID: !Ref BedrockModelId
+        BEDROCK_PUBLIC_ACCESS: !Ref BedrockPublicAccess
         ALLOWED_ORIGINS: !Ref AllowedOrigin
         LOG_LEVEL: INFO
 
