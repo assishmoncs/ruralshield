@@ -8,10 +8,12 @@ from collections import Counter
 from pathlib import Path
 
 SEED = 42
+MODEL_VERSION = "1.1.0"
+TOKEN_RE = re.compile(r"[\w]+", re.UNICODE)
 
 
 def tokens(text):
-    return re.findall(r"[a-z0-9]+", (text or "").lower())
+    return TOKEN_RE.findall((text or "").lower())
 
 
 def read_csv(path):
@@ -149,6 +151,7 @@ def main():
     weights, intercept = train_logreg(train, vocabulary, idf)
     model = {
         "name": "tfidf_logistic_regression",
+        "model_version": MODEL_VERSION,
         "vocabulary": vocabulary,
         "idf": idf,
         "weights": weights,
@@ -165,6 +168,7 @@ def main():
     Path(args.model_out).write_text(json.dumps(model), encoding="utf-8")
 
     report = {
+        "model_version": MODEL_VERSION,
         "validation": metrics(validation, vocabulary, idf, weights, intercept),
         "test": metrics(test, vocabulary, idf, weights, intercept),
         "dataset_rows": len(rows),
