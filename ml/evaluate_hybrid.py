@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend" / "lambda"))
 
 from ml_predictor import predict_risk
+from risk_engine import classify
 from rules import evaluate_rules
 from url_analyzer import analyze_url
 
@@ -87,9 +88,7 @@ def evaluate(rows):
         components = {"ml": ml_score, "rules": rule_score, "url": url_score}
         scores["rule_only"].append(rule_score)
         scores["ml_only"].append(ml_score)
-        scores["ml_rules"].append(
-            weighted_score(components, {"ml": ML_WEIGHT, "rules": RULE_WEIGHT})
-        )
+        scores["ml_rules"].append(weighted_score(components, {"ml": ML_WEIGHT, "rules": RULE_WEIGHT}))
         active_weights = {"ml": ML_WEIGHT, "rules": RULE_WEIGHT}
         if url:
             active_weights["url"] = URL_WEIGHT
@@ -97,22 +96,20 @@ def evaluate(rows):
 
     return {
         "dataset_rows": len(rows),
-        "classification_rule": (
-            "Binary comparison treats system scores above 65 as phishing; "
-            "lower scores are non-phishing for this benchmark."
-        ),
+        "decision_threshold": PHISHING_THRESHOLD,
+        "classification_rule": "Scores above 65 are phishing for this offline benchmark; lower scores are non-phishing.",
+        "decision_architecture": {
+            "security_authority": "ml_rules_url",
+            "bedrock_in_decision": False,
+            "bedrock_role": "contextual explanation only",
+        },
         "results": {name: binary_metrics(labels, values) for name, values in scores.items()},
         "full_hybrid": {
-            "evaluated": False,
-            "reason": (
-                "Bedrock is intentionally not invoked by offline evaluation. "
-                "Cloud integration is covered separately by mocked/service tests."
-            ),
+            "evaluated": True,
+            "numeric_equivalent_to": "ml_rules_url",
+            "reason": "Bedrock is intentionally excluded from the security score. Offline evaluation therefore measures the deterministic security path; Bedrock explanation is tested separately.",
         },
-        "limitations": (
-            "This bundled dataset is synthetic demo data and is too small to support "
-            "production claims or final threshold tuning."
-        ),
+        "limitations": "The bundled dataset is synthetic demo data and is too small to support production claims or final threshold tuning.",
     }
 
 
