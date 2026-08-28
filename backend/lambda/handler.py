@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime, timezone
 
 from bedrock_service import analyze as bedrock_analyze
-from config import ALLOWED_ORIGINS
+from config import ALLOWED_ORIGINS, BEDROCK_PUBLIC_ACCESS
 from language import detect_language
 from ml_predictor import predict_risk
 from risk_engine import combine_scores
@@ -123,6 +123,7 @@ def _scan(event):
         rule_result["hits"],
         language,
         url_result["reasons"],
+        allow_bedrock=(owner_id != "anonymous" or BEDROCK_PUBLIC_ACCESS),
     )
     combined = combine_scores(
         ml_result["score"],
@@ -178,6 +179,7 @@ def _scan(event):
                 "classification": record["classification"],
                 "risk_score": record["risk_score"],
                 "bedrock_available": ai.get("available", False),
+                "bedrock_access_mode": "enabled" if ai.get("available", False) else ai.get("fallback_reason", "disabled"),
                 "persisted": persisted,
                 "urls_checked": len(urls),
             }
@@ -205,6 +207,7 @@ def _scan(event):
             "mitigating_signals": rule_result.get("mitigating_hits", []),
             "ml": ml_result,
             "bedrock_available": ai.get("available", False),
+            "bedrock_fallback_reason": ai.get("fallback_reason"),
             "persisted": persisted,
         },
     )
