@@ -3,6 +3,7 @@
   const region = cfg.cognitoRegion || '';
   const clientId = cfg.cognitoClientId || '';
   const tokenKey = 'ruralshield_access_token';
+  const MIN_PASSWORD_LENGTH = 12;
 
   const $ = (selector) => document.querySelector(selector);
 
@@ -48,7 +49,7 @@
     const email = $('#authEmail')?.value.trim().toLowerCase();
     const password = $('#authPassword')?.value || '';
     if (!email || !password) return setMessage('Enter an email and password.', 'error');
-    if (password.length < 8) return setMessage('Password must contain at least 8 characters.', 'error');
+    if (password.length < MIN_PASSWORD_LENGTH) return setMessage(`Password must contain at least ${MIN_PASSWORD_LENGTH} characters.`, 'error');
     try {
       await cognitoRequest('SignUp', {
         Username: email,
@@ -103,6 +104,8 @@
   }
 
   function init() {
+    $('#authPassword')?.setAttribute('minlength', String(MIN_PASSWORD_LENGTH));
+    $('#authPassword')?.setAttribute('placeholder', `At least ${MIN_PASSWORD_LENGTH} characters`);
     $('#signUpButton')?.addEventListener('click', signUp);
     $('#confirmButton')?.addEventListener('click', confirmSignUp);
     $('#signInButton')?.addEventListener('click', signIn);
