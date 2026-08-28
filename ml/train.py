@@ -162,7 +162,6 @@ def main():
             "validation": len(validation),
             "test": len(test),
             "seed": SEED,
-            "tokenization": "unicode_word_tokens_v1",
         },
     }
     Path(args.model_out).parent.mkdir(parents=True, exist_ok=True)
