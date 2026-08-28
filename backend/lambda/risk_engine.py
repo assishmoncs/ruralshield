@@ -1,5 +1,4 @@
 from config import (
-    AI_WEIGHT,
     ML_WEIGHT,
     RULE_WEIGHT,
     SAFE_MAX,
@@ -16,6 +15,16 @@ def classify(score: float) -> str:
     return "PHISHING"
 
 
+def confidence_level(score: float, *, component_count: int) -> str:
+    """Qualitative decision-strength indicator, not a probability."""
+    distance = abs(score - 50.0)
+    if component_count >= 3 and distance >= 30:
+        return "HIGH"
+    if component_count >= 2 and distance >= 15:
+        return "MEDIUM"
+    return "LOW"
+
+
 def combine_scores(
     ml_score: float,
     url_score: float,
@@ -26,6 +35,12 @@ def combine_scores(
     url_available: bool = True,
     ai_available: bool = True,
 ):
+    """Fuse deterministic security signals.
+
+    Amazon Bedrock is intentionally excluded from the security decision. It is
+    treated as an explanation/context layer so an LLM cannot directly override
+    deterministic phishing evidence.
+    """
     values = {
         "ml": max(0.0, min(100.0, ml_score)),
         "url": max(0.0, min(100.0, url_score)),
@@ -36,24 +51,27 @@ def combine_scores(
         "ml": ML_WEIGHT,
         "url": URL_WEIGHT,
         "rules": RULE_WEIGHT,
-        "ai": AI_WEIGHT,
     }
+
     active = ["rules"]
     if ml_available:
         active.insert(0, "ml")
     if url_available:
         active.append("url")
-    if ai_available:
-        active.append("ai")
 
     denominator = sum(weights[name] for name in active) or 1.0
     score = sum(values[name] * weights[name] for name in active) / denominator
-    score = round(score, 2)
+    score = round(max(0.0, min(100.0, score)), 2)
+
     return {
         "risk_score": score,
         "classification": classify(score),
+        "confidence_level": confidence_level(score, component_count=len(active)),
+        "decision_basis": "ml_rules_url",
         "components": values,
         "weights_used": {
             name: round(weights[name] / denominator, 4) for name in active
         },
+        "ai_available": bool(ai_available),
+        "ai_used_for_decision": False,
     }
