@@ -109,10 +109,22 @@ def _scan(event):
     url_result = _analyze_urls(urls)
     rule_result = evaluate_rules(sanitized)
     ml_result = predict_risk(sanitized)
-    ai = bedrock_analyze(sanitized, ml_result["score"], url_result["score"], rule_result["hits"], language, url_result["reasons"])
+    ai = bedrock_analyze(
+        sanitized,
+        ml_result["score"],
+        url_result["score"],
+        rule_result["hits"],
+        language,
+        url_result["reasons"],
+    )
     combined = combine_scores(
-        ml_result["score"], url_result["score"], rule_result["score"], ai.get("ai_risk_score", 0),
-        ml_available=ml_result.get("available", False), url_available=bool(urls), ai_available=ai.get("available", False),
+        ml_result["score"],
+        url_result["score"],
+        rule_result["score"],
+        ai.get("ai_risk_score", 0),
+        ml_available=ml_result.get("available", False),
+        url_available=bool(urls),
+        ai_available=ai.get("available", False),
     )
 
     reasons = []
@@ -122,9 +134,14 @@ def _scan(event):
     if not reasons:
         reasons = ["No strong phishing signals were found in this scan."]
 
-    confidence = min(0.99, max(0.5, abs(combined["risk_score"] - 50) / 50 * 0.45 + 0.5))
     recommendation = ai.get("recommended_action") or "Do not share your OTP, PIN, password, or card details. Contact your bank using an official channel if you are unsure."
-    summary = ai.get("summary") or ("This looks high risk." if combined["classification"] == "PHISHING" else "This needs caution." if combined["classification"] == "SUSPICIOUS" else "No strong phishing signs were found.")
+    summary = ai.get("summary") or (
+        "This looks high risk."
+        if combined["classification"] == "PHISHING"
+        else "This needs caution."
+        if combined["classification"] == "SUSPICIOUS"
+        else "No strong phishing signs were found."
+    )
     host = url_result.get("features", {}).get("hostname") or ""
     scan_id = str(uuid.uuid4())
     timestamp = datetime.now(timezone.utc).isoformat()
@@ -136,30 +153,54 @@ def _scan(event):
         "input_type": payload["type"],
         "classification": combined["classification"],
         "risk_score": combined["risk_score"],
-        "confidence": round(confidence, 4),
+        "confidence_level": combined["confidence_level"],
         "detected_language": language,
         "scam_category": ai.get("scam_category", "Other/Unknown"),
         "reasons": reasons[:8],
         "url_domain": host,
         "triggered_rules": [h["rule_id"] for h in rule_result["hits"]],
+        "model_version": ml_result.get("model_version", "unknown"),
     }
     persisted = save_scan(record)
     duration_ms = round((time.perf_counter() - started) * 1000, 2)
-    logger.info(json.dumps({"request_id": request_id, "duration_ms": duration_ms, "classification": record["classification"], "risk_score": record["risk_score"], "bedrock_available": ai.get("available", False), "persisted": persisted, "urls_checked": len(urls)}))
+    logger.info(
+        json.dumps(
+            {
+                "request_id": request_id,
+                "duration_ms": duration_ms,
+                "classification": record["classification"],
+                "risk_score": record["risk_score"],
+                "bedrock_available": ai.get("available", False),
+                "persisted": persisted,
+                "urls_checked": len(urls),
+            }
+        )
+    )
 
     public_record = {key: value for key, value in record.items() if key not in {"owner_id", "scan_key"}}
-    return _response(event, 200, {
-        **public_record,
-        "confidence": round(confidence, 2),
-        "summary": summary,
-        "recommendation": recommendation,
-        "components": combined["components"],
-        "weights_used": combined["weights_used"],
-        "url_analysis": {"score": url_result["score"], "reasons": url_result["reasons"], "features": url_result["features"], "urls_checked": url_result["urls_checked"]},
-        "ml": ml_result,
-        "bedrock_available": ai.get("available", False),
-        "persisted": persisted,
-    })
+    return _response(
+        event,
+        200,
+        {
+            **public_record,
+            "summary": summary,
+            "recommendation": recommendation,
+            "components": combined["components"],
+            "weights_used": combined["weights_used"],
+            "decision_basis": combined["decision_basis"],
+            "ai_used_for_decision": combined["ai_used_for_decision"],
+            "url_analysis": {
+                "score": url_result["score"],
+                "reasons": url_result["reasons"],
+                "features": url_result["features"],
+                "urls_checked": url_result["urls_checked"],
+            },
+            "mitigating_signals": rule_result.get("mitigating_hits", []),
+            "ml": ml_result,
+            "bedrock_available": ai.get("available", False),
+            "persisted": persisted,
+        },
+    )
 
 
 def lambda_handler(event, context):
