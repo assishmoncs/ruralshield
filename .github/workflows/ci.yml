@@ -8,8 +8,8 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v7
         with: {python-version: '3.12', cache: pip}
       - run: python -m pip install --upgrade pip
       - run: pip install -r backend/requirements.txt pytest ruff
@@ -32,7 +32,6 @@ jobs:
           model = json.loads(Path("backend/lambda/model.json").read_text(encoding="utf-8"))
           evaluation = json.loads(Path("ml/evaluation.json").read_text(encoding="utf-8"))
           hybrid = json.loads(Path("ml/hybrid_evaluation.json").read_text(encoding="utf-8"))
-
           vocabulary = model.get("vocabulary")
           idf = model.get("idf")
           weights = model.get("weights")
@@ -45,7 +44,7 @@ jobs:
           assert hybrid.get("dataset_rows") == training.get("rows")
           assert hybrid.get("decision_architecture", {}).get("bedrock_in_decision") is False
           assert hybrid.get("decision_architecture", {}).get("security_authority") == "ml_rules_url"
-          print("ML pipeline and generated artifacts are structurally valid.")
+          print("ML pipeline and artifacts are structurally valid.")
           PY
       - run: pytest -q
       - name: Compile Python
