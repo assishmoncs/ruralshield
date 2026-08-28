@@ -9,6 +9,7 @@ SUSPICIOUS_MAX = int(os.getenv("SUSPICIOUS_MAX", "65"))
 MAX_TEXT_LENGTH = int(os.getenv("MAX_TEXT_LENGTH", "5000"))
 TABLE_NAME = os.getenv("TABLE_NAME", "")
 BEDROCK_MODEL_ID = os.getenv("BEDROCK_MODEL_ID", "")
+BEDROCK_PUBLIC_ACCESS = os.getenv("BEDROCK_PUBLIC_ACCESS", "false").strip().lower() == "true"
 AWS_REGION = os.getenv("AWS_REGION", "ap-south-1")
 ALLOWED_ORIGINS = [x.strip() for x in os.getenv("ALLOWED_ORIGINS", "http://localhost:8080").split(",") if x.strip()]
 ALLOWED_LANGUAGES = {"en", "hi", "ta"}
