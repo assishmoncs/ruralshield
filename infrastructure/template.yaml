@@ -8,6 +8,10 @@ Parameters:
   BedrockModelId:
     Type: String
     Default: amazon.nova-lite-v1:0
+  CognitoDomainPrefix:
+    Type: String
+    Default: ruralshield-demo
+    Description: Globally unique Cognito hosted UI prefix in this AWS region. Override if already taken.
 
 Globals:
   Function:
@@ -46,6 +50,8 @@ Resources:
 
   CognitoUserPool:
     Type: AWS::Cognito::UserPool
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       UserPoolName: !Sub ${AWS::StackName}-users
       UsernameAttributes:
@@ -53,7 +59,7 @@ Resources:
       AutoVerifiedAttributes:
         - email
       PasswordPolicy:
-        MinimumLength: 8
+        MinimumLength: 12
         RequireUppercase: true
         RequireLowercase: true
         RequireNumbers: true
@@ -73,6 +79,25 @@ Resources:
       ExplicitAuthFlows:
         - ALLOW_USER_PASSWORD_AUTH
         - ALLOW_REFRESH_TOKEN_AUTH
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthFlows:
+        - code
+      AllowedOAuthScopes:
+        - openid
+        - email
+        - profile
+      SupportedIdentityProviders:
+        - COGNITO
+      CallbackURLs:
+        - !Sub https://${FrontendDistribution.DomainName}/
+      LogoutURLs:
+        - !Sub https://${FrontendDistribution.DomainName}/
+
+  CognitoUserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: !Ref CognitoDomainPrefix
+      UserPoolId: !Ref CognitoUserPool
 
   ScanFunction:
     Type: AWS::Serverless::Function
@@ -100,6 +125,14 @@ Resources:
             ApiId: !Ref RuralShieldApi
             Path: /scan
             Method: POST
+        Feedback:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref RuralShieldApi
+            Path: /feedback
+            Method: POST
+            Auth:
+              Authorizer: CognitoJwtAuthorizer
         History:
           Type: HttpApi
           Properties:
@@ -114,14 +147,6 @@ Resources:
             ApiId: !Ref RuralShieldApi
             Path: /statistics
             Method: GET
-            Auth:
-              Authorizer: CognitoJwtAuthorizer
-        Feedback:
-          Type: HttpApi
-          Properties:
-            ApiId: !Ref RuralShieldApi
-            Path: /feedback
-            Method: POST
             Auth:
               Authorizer: CognitoJwtAuthorizer
         Health:
@@ -240,5 +265,7 @@ Outputs:
     Value: !Ref CognitoUserPool
   CognitoUserPoolClientId:
     Value: !Ref CognitoUserPoolClient
-  CognitoRegion:
-    Value: !Ref AWS::Region
+  CognitoDomain:
+    Value: !Sub https://${CognitoDomainPrefix}.auth.${AWS::Region}.amazoncognito.com
+  CognitoIssuer:
+    Value: !Sub https://cognito-idp.${AWS::Region}.${AWS::URLSuffix}/${CognitoUserPool}
