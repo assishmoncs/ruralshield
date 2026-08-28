@@ -8,9 +8,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend" / "lambda"))
 
-from ml_predictor import predict_risk
-from rules import evaluate_rules
-from url_analyzer import analyze_url
+from ml_predictor import predict_risk  # noqa: E402
+from rules import evaluate_rules  # noqa: E402
+from url_analyzer import analyze_url  # noqa: E402
 
 ML_WEIGHT = 0.40
 URL_WEIGHT = 0.25
