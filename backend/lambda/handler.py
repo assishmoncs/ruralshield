@@ -30,7 +30,8 @@ def _header(event, name):
 def _owner_id(event):
     claims = event.get("requestContext", {}).get("authorizer", {}).get("jwt", {}).get("claims", {})
     subject = claims.get("sub")
-    return f"user#{subject}" if subject else "anonymous"
+    token_use = claims.get("token_use")
+    return f"user#{subject}" if subject and token_use == "id" else "anonymous"
 
 
 def _headers(event):
@@ -171,46 +172,25 @@ def _scan(event):
     }
     persisted = save_scan(record)
     duration_ms = round((time.perf_counter() - started) * 1000, 2)
-    logger.info(
-        json.dumps(
-            {
-                "request_id": request_id,
-                "duration_ms": duration_ms,
-                "classification": record["classification"],
-                "risk_score": record["risk_score"],
-                "bedrock_available": ai.get("available", False),
-                "bedrock_access_mode": "enabled" if ai.get("available", False) else ai.get("fallback_reason", "disabled"),
-                "persisted": persisted,
-                "urls_checked": len(urls),
-            }
-        )
-    )
+    logger.info(json.dumps({"request_id": request_id, "duration_ms": duration_ms, "classification": record["classification"], "risk_score": record["risk_score"], "bedrock_available": ai.get("available", False), "bedrock_access_mode": "enabled" if ai.get("available", False) else ai.get("fallback_reason", "disabled"), "persisted": persisted, "urls_checked": len(urls)}))
 
     public_record = {key: value for key, value in record.items() if key not in {"owner_id", "scan_key"}}
-    return _response(
-        event,
-        200,
-        {
-            **public_record,
-            "summary": summary,
-            "recommendation": recommendation,
-            "components": combined["components"],
-            "weights_used": combined["weights_used"],
-            "decision_basis": combined["decision_basis"],
-            "ai_used_for_decision": combined["ai_used_for_decision"],
-            "url_analysis": {
-                "score": url_result["score"],
-                "reasons": url_result["reasons"],
-                "features": url_result["features"],
-                "urls_checked": url_result["urls_checked"],
-            },
-            "mitigating_signals": rule_result.get("mitigating_hits", []),
-            "ml": ml_result,
-            "bedrock_available": ai.get("available", False),
-            "bedrock_fallback_reason": ai.get("fallback_reason"),
-            "persisted": persisted,
-        },
-    )
+    return _response(event, 200, {
+        **public_record,
+        "summary": summary,
+        "recommendation": recommendation,
+        "components": combined["components"],
+        "weights_used": combined["weights_used"],
+        "confidence_level": combined["confidence_level"],
+        "decision_basis": combined["decision_basis"],
+        "ai_used_for_decision": combined["ai_used_for_decision"],
+        "url_analysis": {"score": url_result["score"], "reasons": url_result["reasons"], "features": url_result["features"], "urls_checked": url_result["urls_checked"]},
+        "mitigating_signals": rule_result.get("mitigating_hits", []),
+        "ml": ml_result,
+        "bedrock_available": ai.get("available", False),
+        "bedrock_fallback_reason": ai.get("fallback_reason"),
+        "persisted": persisted,
+    })
 
 
 def _feedback(event):
