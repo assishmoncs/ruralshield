@@ -116,7 +116,7 @@ def analyze_url(raw: str):
 
     typo_brands = sorted(
         brand for brand in BANK_BRANDS
-        if len(brand) >= 4 and compact_registrable != brand and _levenshtein(compact_registrable, brand) == 1
+        if len(brand) >= 3 and compact_registrable != brand and _levenshtein(compact_registrable, brand) == 1
     )
     if typo_brands:
         reasons.append("The domain is one character away from a known banking brand")
