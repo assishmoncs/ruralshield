@@ -30,9 +30,10 @@ def validate_scan_payload(payload):
         if parsed.scheme not in {"http", "https"} or not parsed.hostname:
             raise ValueError("Malformed URL")
     language = payload.get("language")
-    if language is not None:
-        if not isinstance(language, str) or language not in ALLOWED_LANGUAGES:
-            raise ValueError("Unsupported language")
+    if language is not None and (
+        not isinstance(language, str) or language not in ALLOWED_LANGUAGES
+    ):
+        raise ValueError("Unsupported language")
     return {"type": input_type, "text": text.strip(), "language": language}
 
 
