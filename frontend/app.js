@@ -105,7 +105,7 @@ demos.forEach(([name, text]) => {
 });
 
 function authToken() {
-  return sessionStorage.getItem('ruralshield_access_token') || '';
+  return sessionStorage.getItem('ruralshield_id_token') || '';
 }
 
 async function request(path, options = {}) {
@@ -136,6 +136,9 @@ function showResult(result) {
   const mitigating = (result.mitigating_signals || [])
     .map((item) => `<li>${escapeHtml(item.reason || '')}</li>`)
     .join('');
+  const aiNote = result.bedrock_fallback_reason === 'public_access_disabled'
+    ? '<p class="muted">AI explanation is enabled after sign-in; this result used local security signals.</p>'
+    : '';
   const status = (result.classification || 'SUSPICIOUS').toLowerCase();
   $('#result').classList.remove('hidden');
   $('#result').innerHTML = `
@@ -144,6 +147,7 @@ function showResult(result) {
         <p class="eyebrow">SCAN RESULT</p>
         <div class="status ${status}" role="status">${escapeHtml(result.classification)}</div>
         <p>${escapeHtml(result.summary || 'Review the signals below before taking action.')}</p>
+        ${aiNote}
       </div>
       <div class="score">
         <span>Risk score</span><br>
@@ -179,7 +183,7 @@ function showResult(result) {
     button.addEventListener('click', async () => {
       const scanId = button.dataset.scanId;
       const status = $('#feedbackStatus');
-      if (!scanId) { status.textContent = 'Feedback is unavailable for this scan.'; return; }
+      if (!scanId) { status.textContent = 'Feedback is available after sign-in.'; return; }
       button.disabled = true;
       try {
         await request('/feedback', { method: 'POST', body: JSON.stringify({ scan_id: scanId, feedback: button.dataset.feedback }) });
