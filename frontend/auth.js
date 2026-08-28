@@ -2,7 +2,7 @@
   const cfg = window.RURALSHIELD_CONFIG || {};
   const region = cfg.cognitoRegion || '';
   const clientId = cfg.cognitoClientId || '';
-  const tokenKey = 'ruralshield_access_token';
+  const tokenKey = 'ruralshield_id_token';
   const MIN_PASSWORD_LENGTH = 12;
 
   const $ = (selector) => document.querySelector(selector);
@@ -14,17 +14,19 @@
     el.dataset.type = type;
   }
 
-  function setAuthenticated(accessToken) {
-    sessionStorage.setItem(tokenKey, accessToken);
+  function setAuthenticated(idToken, email = '') {
+    sessionStorage.setItem(tokenKey, idToken);
+    if (email) sessionStorage.setItem('ruralshield_user_email', email);
     $('#authForms')?.classList.add('hidden');
     $('#authSession')?.classList.remove('hidden');
-    const email = sessionStorage.getItem('ruralshield_user_email') || '';
-    if ($('#authUser')) $('#authUser').textContent = email || 'Signed in';
+    const storedEmail = sessionStorage.getItem('ruralshield_user_email') || '';
+    if ($('#authUser')) $('#authUser').textContent = storedEmail || 'Signed in';
     setMessage('Signed in. Private history and statistics are available.', 'success');
   }
 
   function clearAuthenticated() {
     sessionStorage.removeItem(tokenKey);
+    sessionStorage.removeItem('ruralshield_access_token');
     sessionStorage.removeItem('ruralshield_user_email');
     $('#authForms')?.classList.remove('hidden');
     $('#authSession')?.classList.add('hidden');
@@ -89,10 +91,9 @@
         AuthFlow: 'USER_PASSWORD_AUTH',
         AuthParameters: { USERNAME: email, PASSWORD: password },
       });
-      const accessToken = result.AuthenticationResult?.AccessToken;
-      if (!accessToken) throw new Error('Authentication succeeded but no access token was returned.');
-      sessionStorage.setItem('ruralshield_user_email', email);
-      setAuthenticated(accessToken);
+      const idToken = result.AuthenticationResult?.IdToken;
+      if (!idToken) throw new Error('Authentication succeeded but no ID token was returned.');
+      setAuthenticated(idToken, email);
     } catch (error) {
       setMessage(error.message, 'error');
     }
