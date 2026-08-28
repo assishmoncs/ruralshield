@@ -16,7 +16,7 @@ It is **not** a research benchmark and must not be used to claim production dete
 python ml/train.py
 ```
 
-The committed artifact is deterministic for the bundled dataset. CI retrains it and fails if either `backend/lambda/model.json` or `ml/evaluation.json` drifts from the generated files.
+The trainer is deterministic for the bundled dataset. CI validates the generated artifact structure, model metadata, dataset consistency, and hybrid-decision metadata rather than requiring a brittle byte-for-byte artifact match. Formatting-only JSON changes therefore do not fail CI, while structural corruption still does.
 
 Current held-out results on the tiny bundled demo set are recorded in `ml/evaluation.json`. Validation and test each contain six rows. Both currently report 0.8333 accuracy, 1.0 phishing precision, 0.6667 phishing recall, and 0.8 phishing F1. These numbers have very high uncertainty because each held-out split is tiny.
 
@@ -28,19 +28,51 @@ Run:
 python ml/evaluate_hybrid.py
 ```
 
-This writes `ml/hybrid_evaluation.json` and compares the deterministic detector variants using the project's `>65 = phishing` system threshold. On the 40-row bundled demo corpus the current results are:
+This writes `ml/hybrid_evaluation.json` and compares deterministic detector variants using the project's `>65 = phishing` system threshold. Bedrock is deliberately excluded from the security decision and therefore from the numeric offline benchmark.
+
+On the 40-row bundled demo corpus the current results are:
 
 | Variant | Accuracy | Phishing precision | Phishing recall | Phishing F1 |
 | --- | ---: | ---: | ---: | ---: |
-| Rule only | 0.525 | 0.6667 | 0.10 | 0.1739 |
+| Rule only | 0.55 | 1.0 | 0.10 | 0.1818 |
 | ML only | 0.925 | 1.0 | 0.85 | 0.9189 |
 | ML + rules | 0.875 | 1.0 | 0.75 | 0.8571 |
-| ML + rules + URL | 0.775 | 1.0 | 0.55 | 0.7097 |
+| ML + rules + URL | 0.75 | 1.0 | 0.50 | 0.6667 |
 
-This comparison is intentionally reported even though the hybrid variants do **not** win. It is evidence that the initial component weights and system thresholds should not be tuned from this tiny synthetic corpus. It also helped identify and fix a fusion bug where a missing URL was previously counted as a zero-risk URL signal; unavailable signals are now excluded and remaining weights are renormalized.
+This comparison is intentionally reported even though the hybrid variants do **not** win. It is evidence that the initial component weights and thresholds should not be tuned from this tiny synthetic corpus. It also verifies that missing URL/AI components are excluded rather than treated as zero-risk evidence.
 
-The full Bedrock-assisted hybrid is not called during offline evaluation because doing so would make CI depend on AWS credentials, network availability, model access, cost, and nondeterministic model output. Bedrock remains an optional contextual/explanation signal at runtime; the ML/rule/URL detector continues to function if Bedrock fails.
+## Production-data path
 
-## Evaluation requirements for a larger dataset
+For a serious model release, prepare a larger, licensed corpus externally and pass its path explicitly:
 
-Report accuracy, per-class precision/recall/F1, confusion matrices, phishing false negatives, and safe-message false positives. Keep one untouched final test set. Tune model parameters, fusion weights, and the SAFE/SUSPICIOUS/PHISHING thresholds only on training/validation data. Compare rule-only, ML-only, ML+rules, ML+rules+URL, and—where an authorized AWS evaluation environment is available—the full hybrid on the same examples.
+```bash
+python ml/train.py --data path/to/dataset.csv
+```
+
+The accepted schema is:
+
+```csv
+text,label
+Example legitimate message,safe
+Example phishing message,phishing
+```
+
+Before training, the dataset should undergo:
+
+1. schema and label validation
+2. duplicate/near-duplicate review
+3. leakage checks before splitting
+4. class-distribution analysis
+5. stratified train/validation/test splitting
+6. threshold and hyperparameter tuning on training/validation only
+7. final evaluation once on an untouched test set
+
+A model should be released only with its dataset source/version, license, preprocessing description, metrics, and model version documented in the model card.
+
+## Metrics that matter
+
+Report accuracy, per-class precision/recall/F1, confusion matrices, phishing false negatives, safe-message false positives, and—when enough representative data exists—PR-AUC/ROC-AUC and calibration quality. For phishing detection, recall and false negatives are especially important.
+
+## Bedrock evaluation policy
+
+Do not call Amazon Bedrock during normal CI evaluation. A Bedrock benchmark is nondeterministic, costs money, depends on AWS permissions/model access, and can make CI unreliable. Runtime tests mock the service and verify response validation/fallback behavior. A controlled cloud evaluation can be run separately when an authorized AWS test environment is available.
