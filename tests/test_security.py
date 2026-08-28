@@ -73,15 +73,21 @@ def test_anonymous_private_history_requires_authentication():
     assert response["statusCode"] == 401
 
 
-def test_owner_id_comes_from_jwt_subject():
+def test_owner_id_requires_cognito_id_token_claim():
     from handler import _owner_id
 
-    event = {
+    id_token_event = {
         "requestContext": {
-            "authorizer": {"jwt": {"claims": {"sub": "abc-123"}}}
+            "authorizer": {"jwt": {"claims": {"sub": "abc-123", "token_use": "id"}}}
         }
     }
-    assert _owner_id(event) == "user#abc-123"
+    access_token_event = {
+        "requestContext": {
+            "authorizer": {"jwt": {"claims": {"sub": "abc-123", "token_use": "access"}}}
+        }
+    }
+    assert _owner_id(id_token_event) == "user#abc-123"
+    assert _owner_id(access_token_event) == "anonymous"
 
 
 def test_scan_result_does_not_echo_raw_message():
