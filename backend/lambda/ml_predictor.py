@@ -25,13 +25,21 @@ def _load_model():
 
 
 def _tokens(text: str):
-    return re.findall(r"[a-z0-9]+", (text or "").lower())
+    # Unicode-aware tokenization keeps letters from Indic and other scripts
+    # available for future multilingual model artifacts instead of discarding them.
+    return re.findall(r"[\w]+", (text or "").lower(), flags=re.UNICODE)
 
 
 def predict_risk(text: str):
     model = _load_model()
     if not model:
-        return {"score": 50.0, "probability": 0.5, "available": False, "model": "unavailable"}
+        return {
+            "score": 50.0,
+            "probability": 0.5,
+            "available": False,
+            "model": "unavailable",
+            "model_version": "unknown",
+        }
     vocab = model["vocabulary"]
     idf = model["idf"]
     weights = model["weights"]
@@ -51,4 +59,10 @@ def predict_risk(text: str):
     for idx, value in vec.items():
         z += (value / norm) * weights[idx]
     prob = 1.0 / (1.0 + math.exp(-max(-30.0, min(30.0, z))))
-    return {"score": round(prob * 100, 2), "probability": round(prob, 4), "available": True, "model": model.get("name", "tfidf_logistic_regression")}
+    return {
+        "score": round(prob * 100, 2),
+        "probability": round(prob, 4),
+        "available": True,
+        "model": model.get("name", "tfidf_logistic_regression"),
+        "model_version": model.get("model_version", "unknown"),
+    }
