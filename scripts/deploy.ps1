@@ -1,15 +1,21 @@
 param(
     [string]$StackName = "ruralshield-ai",
     [string]$Region = $(if ($env:AWS_REGION) { $env:AWS_REGION } else { "ap-south-1" }),
-    [string]$BedrockModelId = $(if ($env:BEDROCK_MODEL_ID) { $env:BEDROCK_MODEL_ID } else { "amazon.nova-lite-v1:0" })
+    [string]$BedrockModelId = $(if ($env:BEDROCK_MODEL_ID) { $env:BEDROCK_MODEL_ID } else { "amazon.nova-lite-v1:0" }),
+    [ValidateSet("true", "false")][string]$BedrockPublicAccess = $(if ($env:BEDROCK_PUBLIC_ACCESS) { $env:BEDROCK_PUBLIC_ACCESS } else { "false" })
 )
 $ErrorActionPreference = "Stop"
 if (-not (Get-Command aws -ErrorAction SilentlyContinue)) { throw "AWS CLI is required" }
 if (-not (Get-Command sam -ErrorAction SilentlyContinue)) { throw "AWS SAM CLI is required" }
 if (-not (Get-Command python -ErrorAction SilentlyContinue)) { throw "Python is required" }
 
+$Parameters = @(
+    "AllowedOrigin=http://localhost:8080",
+    "BedrockModelId=$BedrockModelId",
+    "BedrockPublicAccess=$BedrockPublicAccess"
+)
 sam build -t infrastructure/template.yaml
-sam deploy --stack-name $StackName --region $Region --resolve-s3 --capabilities CAPABILITY_IAM --no-confirm-changeset --no-fail-on-empty-changeset --parameter-overrides "AllowedOrigin=http://localhost:8080" "BedrockModelId=$BedrockModelId"
+sam deploy --stack-name $StackName --region $Region --resolve-s3 --capabilities CAPABILITY_IAM --no-confirm-changeset --no-fail-on-empty-changeset --parameter-overrides $Parameters
 
 function Get-StackOutput([string]$Key) {
     return aws cloudformation describe-stacks --stack-name $StackName --region $Region --query "Stacks[0].Outputs[?OutputKey=='$Key'].OutputValue | [0]" --output text
@@ -22,7 +28,8 @@ $DistributionId = Get-StackOutput "FrontendDistributionId"
 $CognitoClientId = Get-StackOutput "CognitoUserPoolClientId"
 $CognitoRegion = Get-StackOutput "CognitoRegion"
 
-sam deploy --stack-name $StackName --region $Region --resolve-s3 --capabilities CAPABILITY_IAM --no-confirm-changeset --no-fail-on-empty-changeset --parameter-overrides "AllowedOrigin=$FrontendUrl" "BedrockModelId=$BedrockModelId"
+$Parameters[0] = "AllowedOrigin=$FrontendUrl"
+sam deploy --stack-name $StackName --region $Region --resolve-s3 --capabilities CAPABILITY_IAM --no-confirm-changeset --no-fail-on-empty-changeset --parameter-overrides $Parameters
 
 $DeployDir = Join-Path ([System.IO.Path]::GetTempPath()) ("ruralshield-" + [guid]::NewGuid())
 try {
@@ -48,3 +55,4 @@ Write-Host "RuralShield AI deployed."
 Write-Host "API: $ApiUrl"
 Write-Host "Frontend (HTTPS): $FrontendUrl"
 Write-Host "Cognito client: $CognitoClientId"
+Write-Host "Anonymous Bedrock: $BedrockPublicAccess"
