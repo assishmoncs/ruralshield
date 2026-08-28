@@ -7,14 +7,14 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend" / "lambda"))
 
-from handler import lambda_handler  # noqa: E402
-from language import detect_language  # noqa: E402
-from ml_predictor import predict_risk  # noqa: E402
-from risk_engine import combine_scores  # noqa: E402
-from rules import evaluate_rules  # noqa: E402
-from sanitizer import sanitize_text  # noqa: E402
-from url_analyzer import analyze_url  # noqa: E402
-from validators import validate_feedback_payload, validate_scan_payload  # noqa: E402
+from handler import lambda_handler
+from language import detect_language
+from ml_predictor import predict_risk
+from risk_engine import combine_scores
+from rules import evaluate_rules
+from sanitizer import sanitize_text
+from url_analyzer import analyze_url
+from validators import validate_feedback_payload, validate_scan_payload
 
 
 def test_sanitizer_masks_card_and_otp():
