@@ -9,7 +9,7 @@ from pathlib import Path
 
 SEED = 42
 MODEL_VERSION = "1.1.0"
-TOKEN_RE = re.compile(r"[\w]+", re.UNICODE)
+TOKEN_RE = re.compile(r"[a-z0-9]+")
 
 
 def tokens(text):
