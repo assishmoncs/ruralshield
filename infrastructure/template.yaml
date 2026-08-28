@@ -87,6 +87,7 @@ Resources:
               Action:
                 - dynamodb:PutItem
                 - dynamodb:Query
+                - dynamodb:UpdateItem
               Resource: !GetAtt ScanTable.Arn
             - Sid: InvokeConfiguredBedrockModel
               Effect: Allow
@@ -113,6 +114,14 @@ Resources:
             ApiId: !Ref RuralShieldApi
             Path: /statistics
             Method: GET
+            Auth:
+              Authorizer: CognitoJwtAuthorizer
+        Feedback:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref RuralShieldApi
+            Path: /feedback
+            Method: POST
             Auth:
               Authorizer: CognitoJwtAuthorizer
         Health:
