@@ -12,9 +12,9 @@ from ml_predictor import predict_risk
 from risk_engine import combine_scores
 from rules import evaluate_rules
 from sanitizer import sanitize_text
-from storage import list_history, save_scan, statistics
+from storage import list_history, save_feedback, save_scan, statistics
 from url_analyzer import analyze_url
-from validators import validate_scan_payload
+from validators import validate_feedback_payload, validate_scan_payload
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -61,6 +61,13 @@ def _route(event):
     return method.upper(), path
 
 
+def _parse_json(event):
+    try:
+        return json.loads(event.get("body") or "{}")
+    except json.JSONDecodeError:
+        raise ValueError("Malformed JSON") from None
+
+
 def _extract_urls(text):
     urls = []
     for match in URL_PATTERN.finditer(text or ""):
@@ -92,9 +99,9 @@ def _analyze_urls(urls):
 
 def _scan(event):
     try:
-        payload = json.loads(event.get("body") or "{}")
-    except json.JSONDecodeError:
-        return _response(event, 400, {"error": "Malformed JSON"})
+        payload = _parse_json(event)
+    except ValueError as exc:
+        return _response(event, 400, {"error": str(exc)})
     try:
         payload = validate_scan_payload(payload)
     except (TypeError, ValueError) as exc:
@@ -203,12 +210,28 @@ def _scan(event):
     )
 
 
+def _feedback(event):
+    owner_id = _owner_id(event)
+    if owner_id == "anonymous":
+        return _response(event, 401, {"error": "Authentication is required for feedback"})
+    try:
+        payload = validate_feedback_payload(_parse_json(event))
+    except (TypeError, ValueError) as exc:
+        return _response(event, 400, {"error": str(exc)})
+    recorded = save_feedback(owner_id, payload["scan_id"], payload["feedback"])
+    if not recorded:
+        return _response(event, 404, {"error": "Scan not found for this user"})
+    return _response(event, 200, {"success": True})
+
+
 def lambda_handler(event, context):
     method, path = _route(event)
     if method == "OPTIONS":
         return _response(event, 204, {})
     if method == "POST" and path.endswith("/scan"):
         return _scan(event)
+    if method == "POST" and path.endswith("/feedback"):
+        return _feedback(event)
     if method == "GET" and path.endswith("/history"):
         owner_id = _owner_id(event)
         if owner_id == "anonymous":
