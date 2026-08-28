@@ -48,7 +48,7 @@ def list_history(owner_id, limit=50):
             Limit=min(max(int(limit), 1), 100),
             ScanIndexForward=False,
         )
-        return response.get("Items", [])
+        return [item for item in response.get("Items", []) if item.get("input_type") in {"message", "url"}]
     except (BotoCoreError, ClientError, TypeError, ValueError) as exc:
         logger.warning("dynamodb_history_failed error_type=%s", type(exc).__name__)
         return []
@@ -75,7 +75,7 @@ def _all_history(owner_id, max_items=MAX_STATISTICS_ITEMS):
             if last_key:
                 kwargs["ExclusiveStartKey"] = last_key
             response = table.query(**kwargs)
-            rows.extend(response.get("Items", []))
+            rows.extend(item for item in response.get("Items", []) if item.get("input_type") in {"message", "url"})
             last_key = response.get("LastEvaluatedKey")
             if not last_key:
                 break
@@ -109,3 +109,37 @@ def statistics(owner_id):
         "statistics_truncated": truncated,
         "generated_at": datetime.now(timezone.utc).isoformat(),
     }
+
+
+def save_feedback(owner_id, scan_id, feedback):
+    if not owner_id or owner_id == "anonymous" or not scan_id or feedback not in {"helpful", "incorrect"}:
+        return False
+    try:
+        table = _table()
+        if table is None:
+            return False
+        from boto3.dynamodb.conditions import Key
+
+        response = table.query(
+            KeyConditionExpression=Key("owner_id").eq(owner_id),
+            Limit=100,
+            ScanIndexForward=False,
+        )
+        target = next(
+            (item for item in response.get("Items", []) if item.get("scan_id") == scan_id and item.get("input_type") in {"message", "url"}),
+            None,
+        )
+        if not target:
+            return False
+        table.update_item(
+            Key={"owner_id": owner_id, "scan_key": target["scan_key"]},
+            UpdateExpression="SET feedback = :feedback, feedback_at = :timestamp",
+            ExpressionAttributeValues={
+                ":feedback": feedback,
+                ":timestamp": datetime.now(timezone.utc).isoformat(),
+            },
+        )
+        return True
+    except (BotoCoreError, ClientError, TypeError, ValueError) as exc:
+        logger.warning("dynamodb_feedback_failed error_type=%s", type(exc).__name__)
+        return False
