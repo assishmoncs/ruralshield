@@ -22,10 +22,29 @@ jobs:
           fi
       - run: ruff check backend/lambda ml tests
       - name: Reproduce ML artifacts
+        shell: bash
         run: |
+          tmp_dir="$(mktemp -d)"
+          trap 'rm -rf "$tmp_dir"' EXIT
+          git show HEAD:backend/lambda/model.json > "$tmp_dir/model.json"
+          git show HEAD:ml/evaluation.json > "$tmp_dir/evaluation.json"
+          git show HEAD:ml/hybrid_evaluation.json > "$tmp_dir/hybrid_evaluation.json"
           python ml/train.py
           python ml/evaluate_hybrid.py
-          git diff --exit-code -- backend/lambda/model.json ml/evaluation.json ml/hybrid_evaluation.json
+          python - "$tmp_dir/model.json" backend/lambda/model.json "$tmp_dir/evaluation.json" ml/evaluation.json "$tmp_dir/hybrid_evaluation.json" ml/hybrid_evaluation.json <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          if len(sys.argv[1:]) % 2:
+              raise SystemExit("artifact comparison requires path pairs")
+          for expected_path, actual_path in zip(sys.argv[1::2], sys.argv[2::2]):
+              expected = json.loads(Path(expected_path).read_text(encoding="utf-8"))
+              actual = json.loads(Path(actual_path).read_text(encoding="utf-8"))
+              if expected != actual:
+                  raise SystemExit(f"Generated artifact differs semantically: {actual_path}")
+          print("ML artifacts are reproducible (semantic JSON comparison).")
+          PY
       - run: pytest -q
       - name: Compile Python
         run: python -m compileall -q backend/lambda ml
