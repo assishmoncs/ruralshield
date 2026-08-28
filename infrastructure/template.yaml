@@ -20,7 +20,6 @@ Globals:
         TABLE_NAME: !Ref ScanTable
         BEDROCK_MODEL_ID: !Ref BedrockModelId
         ALLOWED_ORIGINS: !Ref AllowedOrigin
-        AWS_REGION: !Ref AWS::Region
         LOG_LEVEL: INFO
 
 Resources:
@@ -46,18 +45,21 @@ Resources:
 
   CognitoUserPool:
     Type: AWS::Cognito::UserPool
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       UserPoolName: !Sub ${AWS::StackName}-users
       UsernameAttributes:
         - email
       AutoVerifiedAttributes:
         - email
-      PasswordPolicy:
-        MinimumLength: 12
-        RequireUppercase: true
-        RequireLowercase: true
-        RequireNumbers: true
-        RequireSymbols: true
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 12
+          RequireUppercase: true
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: true
       AccountRecoverySetting:
         RecoveryMechanisms:
           - Name: verified_email
