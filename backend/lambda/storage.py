@@ -9,6 +9,7 @@ from config import AWS_REGION, TABLE_NAME
 logger = logging.getLogger(__name__)
 DYNAMODB_CONFIG = Config(connect_timeout=2, read_timeout=5, retries={"max_attempts": 3, "mode": "standard"})
 MAX_STATISTICS_ITEMS = 10000
+ALLOWED_INPUT_TYPES = {"message", "url"}
 
 
 def _table():
@@ -17,6 +18,11 @@ def _table():
     import boto3
 
     return boto3.resource("dynamodb", region_name=AWS_REGION, config=DYNAMODB_CONFIG).Table(TABLE_NAME)
+
+
+def _is_scan_record(item):
+    input_type = item.get("input_type")
+    return input_type is None or input_type in ALLOWED_INPUT_TYPES
 
 
 def save_scan(item):
@@ -48,7 +54,7 @@ def list_history(owner_id, limit=50):
             Limit=min(max(int(limit), 1), 100),
             ScanIndexForward=False,
         )
-        return [item for item in response.get("Items", []) if item.get("input_type") in {"message", "url"}]
+        return [item for item in response.get("Items", []) if _is_scan_record(item)]
     except (BotoCoreError, ClientError, TypeError, ValueError) as exc:
         logger.warning("dynamodb_history_failed error_type=%s", type(exc).__name__)
         return []
@@ -75,7 +81,7 @@ def _all_history(owner_id, max_items=MAX_STATISTICS_ITEMS):
             if last_key:
                 kwargs["ExclusiveStartKey"] = last_key
             response = table.query(**kwargs)
-            rows.extend(item for item in response.get("Items", []) if item.get("input_type") in {"message", "url"})
+            rows.extend(item for item in response.get("Items", []) if _is_scan_record(item))
             last_key = response.get("LastEvaluatedKey")
             if not last_key:
                 break
@@ -126,7 +132,7 @@ def save_feedback(owner_id, scan_id, feedback):
             ScanIndexForward=False,
         )
         target = next(
-            (item for item in response.get("Items", []) if item.get("scan_id") == scan_id and item.get("input_type") in {"message", "url"}),
+            (item for item in response.get("Items", []) if item.get("scan_id") == scan_id and _is_scan_record(item)),
             None,
         )
         if not target:
