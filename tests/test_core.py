@@ -7,14 +7,14 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend" / "lambda"))
 
-from handler import lambda_handler
-from language import detect_language
-from ml_predictor import predict_risk
-from risk_engine import combine_scores
-from rules import evaluate_rules
-from sanitizer import sanitize_text
-from url_analyzer import analyze_url
-from validators import validate_feedback_payload, validate_scan_payload
+from handler import lambda_handler  # noqa: E402
+from language import detect_language  # noqa: E402
+from ml_predictor import predict_risk  # noqa: E402
+from risk_engine import combine_scores  # noqa: E402
+from rules import evaluate_rules  # noqa: E402
+from sanitizer import sanitize_text  # noqa: E402
+from url_analyzer import analyze_url  # noqa: E402
+from validators import validate_feedback_payload, validate_scan_payload  # noqa: E402
 
 
 def test_sanitizer_masks_card_and_otp():
@@ -49,12 +49,16 @@ def test_validation_rejects_non_http_url():
 
 
 def test_feedback_validation():
-    valid = validate_feedback_payload({"scan_id": "123e4567-e89b-12d3-a456-426614174000", "feedback": "incorrect"})
+    valid = validate_feedback_payload(
+        {"scan_id": "123e4567-e89b-12d3-a456-426614174000", "feedback": "incorrect"}
+    )
     assert valid["feedback"] == "incorrect"
     with pytest.raises(ValueError):
         validate_feedback_payload({"scan_id": "not-a-uuid", "feedback": "incorrect"})
     with pytest.raises(ValueError):
-        validate_feedback_payload({"scan_id": "123e4567-e89b-12d3-a456-426614174000", "feedback": "bad"})
+        validate_feedback_payload(
+            {"scan_id": "123e4567-e89b-12d3-a456-426614174000", "feedback": "bad"}
+        )
 
 
 def test_rules_detect_credential_urgency():
@@ -65,7 +69,9 @@ def test_rules_detect_credential_urgency():
 
 
 def test_rules_do_not_flag_security_warning_as_otp_request():
-    result = evaluate_rules("Security reminder: our bank will never ask you to share your OTP, PIN, or password by message.")
+    result = evaluate_rules(
+        "Security reminder: our bank will never ask you to share your OTP, PIN, or password by message."
+    )
     rule_ids = {rule["rule_id"] for rule in result["hits"]}
     assert "OTP_REQUEST" not in rule_ids
     assert "PIN_REQUEST" not in rule_ids
@@ -155,7 +161,9 @@ def test_lambda_rejects_malformed_json():
 
 def test_lambda_complete_scan_without_aws_services():
     event = {
-        "requestContext": {"http": {"method": "POST", "path": "/scan", "requestId": "test-request"}},
+        "requestContext": {
+            "http": {"method": "POST", "path": "/scan", "requestId": "test-request"}
+        },
         "body": json.dumps(
             {
                 "type": "message",
