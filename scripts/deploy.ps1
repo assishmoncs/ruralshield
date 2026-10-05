@@ -38,7 +38,7 @@ try {
     $regionJson = $CognitoRegion | ConvertTo-Json -Compress
     $clientJson = $CognitoClientId | ConvertTo-Json -Compress
     $Config = "window.RURALSHIELD_CONFIG = {apiUrl: $apiJson, cognitoRegion: $regionJson, cognitoClientId: $clientJson};`n"
-    Set-Content -Path (Join-Path $DeployDir "runtime-config.js") -Value $Config -Encoding utf8NoBOM
+    Set-Content -Path (Join-Path $DeployDir "runtime-config.js") -Value $Config -Encoding UTF8
     aws s3 cp (Join-Path $DeployDir "runtime-config.js") "s3://$FrontendBucket/runtime-config.js" --region $Region
     $FrontendFiles = Get-ChildItem -Path "frontend\*" -File | Where-Object { $_.Name -ne "runtime-config.js" }
     foreach ($File in $FrontendFiles) {

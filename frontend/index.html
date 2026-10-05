@@ -4,99 +4,220 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#07130d">
-  <meta name="description" content="RuralShield AI checks suspicious banking messages and links for phishing risk.">
-  <title>RuralShield AI</title>
+  <title>RuralShield AI — Banking Phishing & Scam Detection</title>
+  
+  <!-- SEO Meta Tags -->
+  <meta name="description" content="RuralShield AI detects banking phishing, fake KYC alerts, OTP demands, and malicious links with privacy-first, explainable AI built for rural banking security.">
+  <meta name="keywords" content="phishing detection, rural banking security, fake kyc, otp scam, upi scam, serverless security, ai fraud prevention, india banking scam">
+  <meta name="author" content="RuralShield AI Contributors">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://ruralshield.example.com">
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://ruralshield.example.com">
+  <meta property="og:title" content="RuralShield AI — Banking Phishing & Scam Detection">
+  <meta property="og:description" content="Privacy-first, explainable phishing-risk detection for rural banking users. Check suspicious SMS or links before you act.">
+  <meta property="og:image" content="https://ruralshield.example.com/og-image.png">
+  <meta property="og:locale" content="en_IN">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:url" content="https://ruralshield.example.com">
+  <meta name="twitter:title" content="RuralShield AI — Banking Scam Detection">
+  <meta name="twitter:description" content="Privacy-first, explainable phishing-risk detection for rural banking users.">
+  <meta name="twitter:image" content="https://ruralshield.example.com/og-image.png">
+
+  <!-- Structured Data (JSON-LD) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "RuralShield AI",
+    "description": "Privacy-first, explainable AI phishing and scam detection for rural banking users.",
+    "url": "https://ruralshield.example.com",
+    "applicationCategory": "SecurityApplication",
+    "operatingSystem": "Web",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "INR"
+    },
+    "inLanguage": ["en", "hi", "ta"]
+  }
+  </script>
+
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+<a href="#main-content" class="skip-link">Skip to main content</a>
+
 <header>
-  <a class="brand" href="#scan" aria-label="RuralShield home"><span class="shield" aria-hidden="true">◆</span><span>RuralShield <b>AI</b></span></a>
+  <a class="brand" href="#scan" aria-label="RuralShield home">
+    <span class="shield" aria-hidden="true">◆</span>
+    <span>RuralShield <b>AI</b></span>
+  </a>
   <nav aria-label="Primary navigation">
-    <button data-view="scan" type="button">Scan</button>
+    <button data-view="scan" type="button" class="nav-active">Scan</button>
     <button data-view="history" type="button">History</button>
     <button data-view="dashboard" type="button">Dashboard</button>
   </nav>
   <div class="header-tools">
     <label class="sr-only" for="language">Language</label>
     <select id="language" aria-label="Language"></select>
-    <button class="secondary compact" id="authToggle" type="button" aria-controls="authPanel" aria-expanded="false">Account</button>
+    <a href="#login" class="secondary compact" id="authAction">Sign in</a>
   </div>
 </header>
 
-<main>
-<section id="scan" class="view active">
-  <div class="hero">
-    <p class="eyebrow" data-i18n="eyebrow">BANKING SCAM CHECK</p>
-    <h1 data-i18n="headline">Stop. Check. Stay safe.</h1>
-    <p data-i18n="subhead">Check a suspicious banking message or link before you act.</p>
-  </div>
+<main id="main-content">
+  <!-- Scan View (Home) -->
+  <section id="scan" class="view active visible">
+    <div class="hero">
+      <p class="eyebrow" data-i18n="eyebrow">BANKING SCAM CHECK</p>
+      <h1 data-i18n="headline">Stop. Check. Stay safe.</h1>
+      <p data-i18n="subhead">Check a suspicious banking message or link before you act.</p>
+    </div>
 
-  <div class="warning" role="note">⚠ <span data-i18n="privacy">Never enter your actual OTP, PIN, password, or complete card details into RuralShield AI.</span></div>
+    <div class="warning" role="note">
+      <span aria-hidden="true">⚠</span>
+      <span data-i18n="privacy">Never enter your actual OTP, PIN, password, or complete card details into RuralShield AI.</span>
+    </div>
 
-  <section id="authPanel" class="panel auth-panel hidden" aria-labelledby="authTitle">
-    <div class="section-head">
-      <div>
-        <p class="eyebrow">PRIVATE HISTORY</p>
-        <h2 id="authTitle">Sign in</h2>
-        <p class="muted">Authentication is only needed for your private scan history and statistics.</p>
-      </div>
-      <button class="secondary" id="closeAuth" type="button">Close</button>
+    <div class="grid">
+      <article class="card">
+        <span class="step">01</span>
+        <h2 data-i18n="messageTitle">Check a message</h2>
+        <label class="sr-only" for="message">Suspicious message</label>
+        <textarea id="message" maxlength="5000" data-i18n-placeholder="messagePlaceholder" placeholder="Paste the suspicious message here"></textarea>
+        <button class="primary" id="scanMessage" data-i18n="scanMessage" type="button">SCAN MESSAGE</button>
+      </article>
+
+      <article class="card">
+        <span class="step">02</span>
+        <h2 data-i18n="urlTitle">Check a link</h2>
+        <label class="sr-only" for="url">Suspicious URL</label>
+        <input id="url" maxlength="2048" inputmode="url" autocomplete="url" data-i18n-placeholder="urlPlaceholder" placeholder="Enter suspicious URL">
+        <button class="primary" id="scanUrl" data-i18n="scanUrl" type="button">CHECK URL</button>
+      </article>
     </div>
-    <div id="authForms">
-      <div class="auth-grid">
-        <label>Email<input id="authEmail" type="email" autocomplete="email" maxlength="254" placeholder="you@example.com"></label>
-        <label>Password<input id="authPassword" type="password" autocomplete="current-password" minlength="8" maxlength="128" placeholder="At least 8 characters"></label>
-      </div>
-      <div class="auth-actions">
-        <button class="primary" id="signInButton" type="button">SIGN IN</button>
-        <button class="secondary" id="signUpButton" type="button">CREATE ACCOUNT</button>
-      </div>
-      <div id="confirmForm" class="hidden confirm-box">
-        <label>Verification code<input id="confirmCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="12" placeholder="Code from your email"></label>
-        <input id="confirmEmail" type="hidden">
-        <button class="secondary" id="confirmButton" type="button">VERIFY EMAIL</button>
-      </div>
+
+    <div class="demo">
+      <h3>DEMO DATA</h3>
+      <div id="demoExamples" class="chips"></div>
     </div>
-    <div id="authSession" class="hidden">
-      <p>Signed in as <strong id="authUser">Signed in</strong></p>
-      <button class="secondary" id="signOutButton" type="button">SIGN OUT</button>
-    </div>
-    <p id="authMessage" class="auth-message" role="status" aria-live="polite"></p>
+
+    <section id="result" class="result hidden" aria-live="polite"></section>
   </section>
 
-  <div class="grid">
-    <article class="card">
-      <span class="step">01</span>
-      <h2 data-i18n="messageTitle">Check a message</h2>
-      <label class="sr-only" for="message">Suspicious message</label>
-      <textarea id="message" maxlength="5000" data-i18n-placeholder="messagePlaceholder" placeholder="Paste the suspicious message here"></textarea>
-      <button class="primary" id="scanMessage" data-i18n="scanMessage" type="button">SCAN MESSAGE</button>
-    </article>
-    <article class="card">
-      <span class="step">02</span>
-      <h2 data-i18n="urlTitle">Check a link</h2>
-      <label class="sr-only" for="url">Suspicious URL</label>
-      <input id="url" maxlength="2048" inputmode="url" autocomplete="url" data-i18n-placeholder="urlPlaceholder" placeholder="Enter suspicious URL">
-      <button class="primary" id="scanUrl" data-i18n="scanUrl" type="button">CHECK URL</button>
-    </article>
-  </div>
+  <!-- History View -->
+  <section id="history" class="view">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">PRIVATE BY DESIGN</p>
+        <h1>Scan history</h1>
+      </div>
+      <button class="secondary" id="refreshHistory" type="button">Refresh</button>
+    </div>
+    <div id="historyContent" class="panel"></div>
+  </section>
 
-  <div class="demo"><h3>DEMO DATA</h3><div id="demoExamples" class="chips"></div></div>
-  <section id="result" class="result hidden" aria-live="polite"></section>
-</section>
+  <!-- Dashboard View -->
+  <section id="dashboard" class="view">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">LIVE STORED DATA</p>
+        <h1>Detection dashboard</h1>
+      </div>
+      <button class="secondary" id="refreshStats" type="button">Refresh</button>
+    </div>
+    <div id="statsContent"></div>
+  </section>
 
-<section id="history" class="view">
-  <div class="section-head"><div><p class="eyebrow">PRIVATE BY DESIGN</p><h1>Scan history</h1></div><button class="secondary" id="refreshHistory" type="button">Refresh</button></div>
-  <div id="historyContent" class="panel"></div>
-</section>
+  <!-- Full-Page Login View -->
+  <section id="login" class="view auth-view">
+    <div class="auth-container">
+      <div class="auth-brand">
+        <span class="shield" aria-hidden="true">◆</span>
+        <h1>RuralShield <b>AI</b></h1>
+        <p class="auth-tagline">Protect your banking. Check before you act.</p>
+      </div>
+      <form id="loginForm" class="auth-form" novalidate>
+        <h2>Sign in</h2>
+        <p class="muted">Access your private scan history and personalized statistics.</p>
+        <div class="form-group">
+          <label for="loginEmail">Email address</label>
+          <input id="loginEmail" type="email" autocomplete="email" maxlength="254" placeholder="you@example.com" required>
+        </div>
+        <div class="form-group">
+          <label for="loginPassword">Password</label>
+          <div class="password-wrapper">
+            <input id="loginPassword" type="password" autocomplete="current-password" minlength="12" maxlength="128" placeholder="At least 12 characters" required>
+            <button type="button" class="password-toggle" aria-label="Toggle password visibility">👁</button>
+          </div>
+        </div>
+        <button class="primary" type="submit" id="signInSubmit">SIGN IN</button>
+        <p class="auth-switch">Don't have an account? <a href="#signup" class="link">Create one</a></p>
+      </form>
+      <p id="loginMessage" class="auth-message hidden" role="status" aria-live="polite"></p>
+    </div>
+  </section>
 
-<section id="dashboard" class="view">
-  <div class="section-head"><div><p class="eyebrow">LIVE STORED DATA</p><h1>Detection dashboard</h1></div><button class="secondary" id="refreshStats" type="button">Refresh</button></div>
-  <div id="statsContent"></div>
-</section>
+  <!-- Full-Page Sign Up View -->
+  <section id="signup" class="view auth-view">
+    <div class="auth-container">
+      <div class="auth-brand">
+        <span class="shield" aria-hidden="true">◆</span>
+        <h1>RuralShield <b>AI</b></h1>
+        <p class="auth-tagline">Safe, confidential, and privacy-first.</p>
+      </div>
+      <form id="signupForm" class="auth-form" novalidate>
+        <h2>Create account</h2>
+        <p class="muted">Your scans are encrypted and scoped exclusively to your identity.</p>
+        <div class="form-group">
+          <label for="signupEmail">Email address</label>
+          <input id="signupEmail" type="email" autocomplete="email" maxlength="254" placeholder="you@example.com" required>
+        </div>
+        <div class="form-group">
+          <label for="signupPassword">Password</label>
+          <div class="password-wrapper">
+            <input id="signupPassword" type="password" autocomplete="new-password" minlength="12" maxlength="128" placeholder="At least 12 characters" required>
+            <button type="button" class="password-toggle" aria-label="Toggle password visibility">👁</button>
+          </div>
+          <p class="field-hint">Must contain at least 12 characters</p>
+        </div>
+        <button class="primary" type="submit" id="signUpSubmit">CREATE ACCOUNT</button>
+        <p class="auth-switch">Already have an account? <a href="#login" class="link">Sign in</a></p>
+      </form>
+      <p id="signupMessage" class="auth-message hidden" role="status" aria-live="polite"></p>
+    </div>
+  </section>
+
+  <!-- Full-Page Email Verification View -->
+  <section id="verify" class="view auth-view">
+    <div class="auth-container">
+      <div class="auth-brand">
+        <span class="shield" aria-hidden="true">◆</span>
+        <h1>RuralShield <b>AI</b></h1>
+        <p class="auth-tagline">Email Verification</p>
+      </div>
+      <form id="verifyForm" class="auth-form" novalidate>
+        <h2>Verify your email</h2>
+        <p class="muted">We sent a verification code to <strong id="verifyEmailDisplay">your email</strong>.</p>
+        <div class="form-group">
+          <label for="verifyCode">Verification code</label>
+          <input id="verifyCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="12" placeholder="Enter confirmation code" required>
+          <input id="verifyEmailHidden" type="hidden">
+        </div>
+        <button class="primary" type="submit" id="verifySubmit">CONFIRM EMAIL</button>
+        <p class="auth-switch"><a href="#login" class="link">Back to sign in</a></p>
+      </form>
+      <p id="verifyMessage" class="auth-message hidden" role="status" aria-live="polite"></p>
+    </div>
+  </section>
 </main>
 
 <footer>RuralShield AI · Detection is probabilistic. When in doubt, contact your bank through its official channel.</footer>
+
 <script src="runtime-config.js"></script>
 <script src="auth.js"></script>
 <script src="app.js"></script>

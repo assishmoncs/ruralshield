@@ -6,34 +6,58 @@
   const MIN_PASSWORD_LENGTH = 12;
 
   const $ = (selector) => document.querySelector(selector);
+  const $$ = (selector) => [...document.querySelectorAll(selector)];
 
-  function setMessage(text, type = 'info') {
-    const el = $('#authMessage');
+  function setMessage(elementId, text, type = 'info') {
+    const el = $(elementId);
     if (!el) return;
     el.textContent = text;
     el.dataset.type = type;
+    el.classList.toggle('hidden', !text);
+  }
+
+  function updateAuthHeader() {
+    const authAction = $('#authAction');
+    if (!authAction) return;
+
+    const token = sessionStorage.getItem(tokenKey);
+    const email = sessionStorage.getItem('ruralshield_user_email') || '';
+
+    if (token) {
+      const initial = (email ? email[0] : 'U').toUpperCase();
+      authAction.innerHTML = `<span class="user-avatar">${initial}</span> Sign out`;
+      authAction.removeAttribute('href');
+      authAction.onclick = (e) => {
+        e.preventDefault();
+        signOut();
+      };
+    } else {
+      authAction.innerHTML = 'Sign in';
+      authAction.setAttribute('href', '#login');
+      authAction.onclick = null;
+    }
   }
 
   function setAuthenticated(idToken, email = '') {
     sessionStorage.setItem(tokenKey, idToken);
     if (email) sessionStorage.setItem('ruralshield_user_email', email);
-    $('#authForms')?.classList.add('hidden');
-    $('#authSession')?.classList.remove('hidden');
-    const storedEmail = sessionStorage.getItem('ruralshield_user_email') || '';
-    if ($('#authUser')) $('#authUser').textContent = storedEmail || 'Signed in';
-    setMessage('Signed in. Private history and statistics are available.', 'success');
+    updateAuthHeader();
+    if (window.navigate) {
+      window.navigate('#scan');
+    }
   }
 
   function clearAuthenticated() {
     sessionStorage.removeItem(tokenKey);
     sessionStorage.removeItem('ruralshield_access_token');
     sessionStorage.removeItem('ruralshield_user_email');
-    $('#authForms')?.classList.remove('hidden');
-    $('#authSession')?.classList.add('hidden');
+    updateAuthHeader();
   }
 
   async function cognitoRequest(target, body) {
-    if (!region || !clientId) throw new Error('Authentication is not configured for this deployment.');
+    if (!region || !clientId) {
+      throw new Error('Authentication is not configured for this deployment. Please set Cognito configuration in runtime-config.js.');
+    }
     const response = await fetch(`https://cognito-idp.${region}.amazonaws.com/`, {
       method: 'POST',
       headers: {
@@ -43,15 +67,31 @@
       body: JSON.stringify({ ClientId: clientId, ...body }),
     });
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.message || `Authentication request failed (${response.status})`);
+    if (!response.ok) {
+      throw new Error(data.message || `Authentication request failed (${response.status})`);
+    }
     return data;
   }
 
-  async function signUp() {
-    const email = $('#authEmail')?.value.trim().toLowerCase();
-    const password = $('#authPassword')?.value || '';
-    if (!email || !password) return setMessage('Enter an email and password.', 'error');
-    if (password.length < MIN_PASSWORD_LENGTH) return setMessage(`Password must contain at least ${MIN_PASSWORD_LENGTH} characters.`, 'error');
+  async function handleSignUp(e) {
+    e.preventDefault();
+    const email = $('#signupEmail')?.value.trim().toLowerCase();
+    const password = $('#signupPassword')?.value || '';
+    const submitBtn = $('#signUpSubmit');
+
+    if (!email || !password) {
+      return setMessage('#signupMessage', 'Please provide both email and password.', 'error');
+    }
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      return setMessage('#signupMessage', `Password must contain at least ${MIN_PASSWORD_LENGTH} characters.`, 'error');
+    }
+
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span class="spinner"></span> CREATING ACCOUNT…';
+    }
+    setMessage('#signupMessage', '', 'info');
+
     try {
       await cognitoRequest('SignUp', {
         Username: email,
@@ -59,33 +99,75 @@
         UserAttributes: [{ Name: 'email', Value: email }],
       });
       sessionStorage.setItem('ruralshield_pending_email', email);
-      $('#confirmEmail').value = email;
-      $('#confirmForm')?.classList.remove('hidden');
-      setMessage('Account created. Enter the verification code sent to your email.', 'success');
+      const display = $('#verifyEmailDisplay');
+      if (display) display.textContent = email;
+      const hidden = $('#verifyEmailHidden');
+      if (hidden) hidden.value = email;
+
+      setMessage('#signupMessage', '', 'info');
+      if (window.navigate) {
+        window.navigate('#verify');
+      }
     } catch (error) {
-      setMessage(error.message, 'error');
+      setMessage('#signupMessage', error.message, 'error');
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = 'CREATE ACCOUNT';
+      }
     }
   }
 
-  async function confirmSignUp() {
-    const email = $('#confirmEmail')?.value.trim().toLowerCase();
-    const code = $('#confirmCode')?.value.trim();
-    if (!email || !code) return setMessage('Enter the email and verification code.', 'error');
+  async function handleConfirmSignUp(e) {
+    e.preventDefault();
+    const email = $('#verifyEmailHidden')?.value.trim().toLowerCase() ||
+                  sessionStorage.getItem('ruralshield_pending_email') || '';
+    const code = $('#verifyCode')?.value.trim();
+    const submitBtn = $('#verifySubmit');
+
+    if (!email || !code) {
+      return setMessage('#verifyMessage', 'Please enter your verification code.', 'error');
+    }
+
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span class="spinner"></span> VERIFYING…';
+    }
+
     try {
       await cognitoRequest('ConfirmSignUp', { Username: email, ConfirmationCode: code });
       sessionStorage.removeItem('ruralshield_pending_email');
-      $('#confirmForm')?.classList.add('hidden');
-      $('#authEmail').value = email;
-      setMessage('Email verified. Sign in to continue.', 'success');
+      setMessage('#loginMessage', 'Email verified successfully! Please sign in.', 'success');
+      const loginEmail = $('#loginEmail');
+      if (loginEmail) loginEmail.value = email;
+      if (window.navigate) {
+        window.navigate('#login');
+      }
     } catch (error) {
-      setMessage(error.message, 'error');
+      setMessage('#verifyMessage', error.message, 'error');
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = 'CONFIRM EMAIL';
+      }
     }
   }
 
-  async function signIn() {
-    const email = $('#authEmail')?.value.trim().toLowerCase();
-    const password = $('#authPassword')?.value || '';
-    if (!email || !password) return setMessage('Enter an email and password.', 'error');
+  async function handleSignIn(e) {
+    e.preventDefault();
+    const email = $('#loginEmail')?.value.trim().toLowerCase();
+    const password = $('#loginPassword')?.value || '';
+    const submitBtn = $('#signInSubmit');
+
+    if (!email || !password) {
+      return setMessage('#loginMessage', 'Please enter your email and password.', 'error');
+    }
+
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span class="spinner"></span> SIGNING IN…';
+    }
+
     try {
       const result = await cognitoRequest('InitiateAuth', {
         AuthFlow: 'USER_PASSWORD_AUTH',
@@ -93,29 +175,64 @@
       });
       const idToken = result.AuthenticationResult?.IdToken;
       if (!idToken) throw new Error('Authentication succeeded but no ID token was returned.');
+      setMessage('#loginMessage', '', 'info');
       setAuthenticated(idToken, email);
     } catch (error) {
-      setMessage(error.message, 'error');
+      setMessage('#loginMessage', error.message, 'error');
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = 'SIGN IN';
+      }
     }
   }
 
   function signOut() {
     clearAuthenticated();
-    setMessage('Signed out.', 'info');
+    setMessage('#loginMessage', 'You have been signed out.', 'info');
+    if (window.navigate) {
+      window.navigate('#login');
+    }
+  }
+
+  function setupPasswordToggles() {
+    $$('.password-toggle').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const input = btn.closest('.password-wrapper')?.querySelector('input');
+        if (!input) return;
+        const isPassword = input.type === 'password';
+        input.type = isPassword ? 'text' : 'password';
+        btn.textContent = isPassword ? '🙈' : '👁';
+        btn.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
+      });
+    });
   }
 
   function init() {
-    $('#authPassword')?.setAttribute('minlength', String(MIN_PASSWORD_LENGTH));
-    $('#authPassword')?.setAttribute('placeholder', `At least ${MIN_PASSWORD_LENGTH} characters`);
-    $('#signUpButton')?.addEventListener('click', signUp);
-    $('#confirmButton')?.addEventListener('click', confirmSignUp);
-    $('#signInButton')?.addEventListener('click', signIn);
-    $('#signOutButton')?.addEventListener('click', signOut);
+    $('#signupForm')?.addEventListener('submit', handleSignUp);
+    $('#verifyForm')?.addEventListener('submit', handleConfirmSignUp);
+    $('#loginForm')?.addEventListener('submit', handleSignIn);
 
-    const existing = sessionStorage.getItem(tokenKey);
-    if (existing) setAuthenticated(existing);
+    setupPasswordToggles();
+    updateAuthHeader();
+
+    const pendingEmail = sessionStorage.getItem('ruralshield_pending_email');
+    if (pendingEmail) {
+      const display = $('#verifyEmailDisplay');
+      if (display) display.textContent = pendingEmail;
+      const hidden = $('#verifyEmailHidden');
+      if (hidden) hidden.value = pendingEmail;
+    }
   }
 
-  window.RuralShieldAuth = { init, signOut };
+  window.RuralShieldAuth = {
+    init,
+    signOut,
+    isAuthenticated: () => Boolean(sessionStorage.getItem(tokenKey)),
+    getToken: () => sessionStorage.getItem(tokenKey) || '',
+    getUserEmail: () => sessionStorage.getItem('ruralshield_user_email') || '',
+    updateAuthHeader,
+  };
+
   document.addEventListener('DOMContentLoaded', init);
 })();

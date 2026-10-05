@@ -55,6 +55,8 @@ jobs:
           test -s frontend/styles.css
           test -s frontend/app.js
           test -s frontend/auth.js
+          test -s frontend/robots.txt
+          test -s frontend/sitemap.xml
           node --check frontend/app.js
           node --check frontend/auth.js
       - name: Install SAM CLI
