@@ -63,6 +63,8 @@ RuralShield AI is a serverless, mobile-first phishing-risk detection system for 
 
 **Important:** Amazon Bedrock is **not** part of the final security decision. The security decision uses ML + rules + passive URL evidence. Bedrock is a contextual explanation layer and can be disabled/fail without preventing a local security verdict.
 
+The interface follows the device's light/dark preference by default and provides a manual theme toggle whose selection is saved in the browser. Authenticated history and statistics require a valid Cognito session; anonymous scans are not saved, and feedback is only offered when a scan was persisted successfully.
+
 ## 🏛️ Architecture
 
 ```text
@@ -478,6 +480,7 @@ GitHub Actions verifies:
 - pytest regression suite
 - Python compilation
 - frontend asset and JavaScript syntax checks
+- frontend element-binding contract tests and passive URL edge-case regression tests
 - SAM template validation
 - SAM build
 - Lambda package contents
