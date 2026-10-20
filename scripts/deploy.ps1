@@ -1,7 +1,7 @@
 param(
     [string]$StackName = "ruralshield-ai",
     [string]$Region = $(if ($env:AWS_REGION) { $env:AWS_REGION } else { "ap-south-1" }),
-    [string]$BedrockModelId = $(if ($env:BEDROCK_MODEL_ID) { $env:BEDROCK_MODEL_ID } else { "amazon.nova-lite-v1:0" }),
+    [string]$BedrockModelId = $(if ($env:BEDROCK_MODEL_ID) { $env:BEDROCK_MODEL_ID } else { "apac.amazon.nova-lite-v1:0" }),
     [ValidateSet("true", "false")][string]$BedrockPublicAccess = $(if ($env:BEDROCK_PUBLIC_ACCESS) { $env:BEDROCK_PUBLIC_ACCESS } else { "false" })
 )
 $ErrorActionPreference = "Stop"
