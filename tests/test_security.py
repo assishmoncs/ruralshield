@@ -7,6 +7,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend" / "lambda"))
 
+import handler as handler_module
 from handler import lambda_handler
 from rules import evaluate_rules
 from sanitizer import sanitize_text
@@ -102,3 +103,70 @@ def test_scan_result_does_not_echo_raw_message():
     assert "123456" not in body
     assert "4111 1111 1111 1111" not in body
     assert message not in body
+
+@pytest.mark.parametrize(
+    ("path", "claims", "expected_allow"),
+    [
+        ("/scan", None, False),
+        ("/scan-authenticated", {"sub": "abc-123", "token_use": "id"}, True),
+    ],
+)
+def test_bedrock_is_enabled_only_for_authenticated_scans_when_public_access_is_off(
+    monkeypatch, path, claims, expected_allow
+):
+    monkeypatch.setattr(handler_module, "BEDROCK_PUBLIC_ACCESS", False)
+    monkeypatch.setattr(handler_module, "sanitize_text", lambda text: text)
+    monkeypatch.setattr(handler_module, "detect_language", lambda text: "en")
+    monkeypatch.setattr(handler_module, "_extract_urls", lambda text: [])
+    monkeypatch.setattr(
+        handler_module,
+        "_analyze_urls",
+        lambda urls: {"score": 0, "features": {}, "reasons": [], "urls_checked": 0},
+    )
+    monkeypatch.setattr(
+        handler_module,
+        "evaluate_rules",
+        lambda text: {"score": 0, "hits": [], "mitigating_hits": []},
+    )
+    monkeypatch.setattr(
+        handler_module,
+        "predict_risk",
+        lambda text: {
+            "score": 0,
+            "available": True,
+            "model_version": "test-model",
+            "model": "tfidf_logistic_regression",
+        },
+    )
+    observed = {}
+
+    def fake_bedrock(*args, allow_bedrock, **kwargs):
+        observed["allow_bedrock"] = allow_bedrock
+        return {
+            "available": False,
+            "summary": "Local test fallback",
+            "reasons": [],
+            "recommended_action": "Use official bank channels.",
+            "scam_category": "Other/Unknown",
+            "ai_risk_score": 0,
+            "fallback_reason": "public_access_disabled",
+        }
+
+    monkeypatch.setattr(handler_module, "bedrock_analyze", fake_bedrock)
+    monkeypatch.setattr(handler_module, "save_scan", lambda record: False)
+    request_context = {
+        "http": {"method": "POST", "path": path},
+        "requestId": "route-auth-test",
+    }
+    if claims:
+        request_context["authorizer"] = {"jwt": {"claims": claims}}
+    event = {
+        "requestContext": request_context,
+        "body": json.dumps({"type": "message", "text": "Please check this message", "language": "en"}),
+    }
+
+    response = lambda_handler(event, None)
+
+    assert response["statusCode"] == 200
+    assert observed["allow_bedrock"] is expected_allow
+
