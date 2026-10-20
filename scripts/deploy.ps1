@@ -14,11 +14,20 @@ $Parameters = @(
     "BedrockModelId=$BedrockModelId",
     "BedrockPublicAccess=$BedrockPublicAccess"
 )
+
 sam build -t infrastructure/template.yaml
+if ($LASTEXITCODE -ne 0) { throw "SAM build failed (exit code $LASTEXITCODE)." }
+
 sam deploy --stack-name $StackName --region $Region --resolve-s3 --capabilities CAPABILITY_IAM --no-confirm-changeset --no-fail-on-empty-changeset --parameter-overrides $Parameters
+if ($LASTEXITCODE -ne 0) { throw "Initial SAM/CloudFormation deployment failed (exit code $LASTEXITCODE). Frontend deployment was stopped." }
 
 function Get-StackOutput([string]$Key) {
-    return aws cloudformation describe-stacks --stack-name $StackName --region $Region --query "Stacks[0].Outputs[?OutputKey=='$Key'].OutputValue | [0]" --output text
+    $OutputValue = aws cloudformation describe-stacks --stack-name $StackName --region $Region --query "Stacks[0].Outputs[?OutputKey=='$Key'].OutputValue | [0]" --output text
+    $ExitCode = $LASTEXITCODE
+    if ($ExitCode -ne 0) { throw "Could not retrieve CloudFormation output '$Key' (exit code $ExitCode)." }
+    $OutputValue = ($OutputValue | Out-String).Trim()
+    if (-not $OutputValue -or $OutputValue -eq "None") { throw "CloudFormation output '$Key' is empty." }
+    return $OutputValue
 }
 
 $ApiUrl = Get-StackOutput "ApiUrl"
@@ -30,6 +39,7 @@ $CognitoRegion = Get-StackOutput "CognitoRegion"
 
 $Parameters[0] = "AllowedOrigin=$FrontendUrl"
 sam deploy --stack-name $StackName --region $Region --resolve-s3 --capabilities CAPABILITY_IAM --no-confirm-changeset --no-fail-on-empty-changeset --parameter-overrides $Parameters
+if ($LASTEXITCODE -ne 0) { throw "CORS configuration deployment failed (exit code $LASTEXITCODE). Frontend upload was stopped." }
 
 $DeployDir = Join-Path ([System.IO.Path]::GetTempPath()) ("ruralshield-" + [guid]::NewGuid())
 try {
@@ -39,12 +49,18 @@ try {
     $clientJson = $CognitoClientId | ConvertTo-Json -Compress
     $Config = "window.RURALSHIELD_CONFIG = {apiUrl: $apiJson, cognitoRegion: $regionJson, cognitoClientId: $clientJson};`n"
     Set-Content -Path (Join-Path $DeployDir "runtime-config.js") -Value $Config -Encoding UTF8
+
     aws s3 cp (Join-Path $DeployDir "runtime-config.js") "s3://$FrontendBucket/runtime-config.js" --region $Region
+    if ($LASTEXITCODE -ne 0) { throw "Uploading runtime-config.js failed (exit code $LASTEXITCODE)." }
+
     $FrontendFiles = Get-ChildItem -Path "frontend\*" -File | Where-Object { $_.Name -ne "runtime-config.js" }
     foreach ($File in $FrontendFiles) {
         aws s3 cp $File.FullName "s3://$FrontendBucket/$($File.Name)" --region $Region
+        if ($LASTEXITCODE -ne 0) { throw "Uploading frontend file '$($File.Name)' failed (exit code $LASTEXITCODE)." }
     }
+
     aws cloudfront create-invalidation --distribution-id $DistributionId --paths "/*" | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "CloudFront invalidation failed (exit code $LASTEXITCODE)." }
 }
 finally {
     if (Test-Path $DeployDir) { Remove-Item $DeployDir -Recurse -Force }
