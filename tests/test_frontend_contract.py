@@ -94,3 +94,12 @@ def test_themes_respect_saved_choice_and_reduced_motion():
     assert "localStorage.setItem(THEME_KEY, currentTheme)" in app
     assert 'html[data-theme="dark"]' in css
     assert "prefers-reduced-motion: reduce" in css
+
+
+
+def test_global_navigation_export_does_not_recurse():
+    app = APP_PATH.read_text(encoding="utf-8")
+    assert "function navigateTo(rawHash)" in app
+    assert "window.navigate = navigateTo;" in app
+    assert "window.navigate = (hash) => navigate(hash)" not in app
+    assert "navigateTo(window.location.hash || '#scan')" in app
