@@ -447,6 +447,7 @@ $('#refreshStats')?.addEventListener('click', loadStats);
 
 // Initialize preferences before showing the first route.
 document.addEventListener('DOMContentLoaded', () => {
+  initTheme();
   const savedLanguage = localStorage.getItem(LANGUAGE_KEY);
   const initialLanguage = Object.prototype.hasOwnProperty.call(locales, savedLanguage) ? savedLanguage : 'en';
   if (languageSelect) languageSelect.value = initialLanguage;
