@@ -187,7 +187,7 @@ Resources:
       SSESpecification: {SSEEnabled: true}
       PointInTimeRecoverySpecification: {PointInTimeRecoveryEnabled: true}
 
-  FrontendBucket:
+  FrontendBucketRecreated:
     Type: AWS::S3::Bucket
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
@@ -213,7 +213,7 @@ Resources:
         SigningBehavior: always
         SigningProtocol: sigv4
 
-  FrontendDistribution:
+  FrontendDistributionRecreated:
     Type: AWS::CloudFront::Distribution
     Properties:
       DistributionConfig:
@@ -223,7 +223,7 @@ Resources:
         DefaultRootObject: index.html
         Origins:
           - Id: FrontendS3Origin
-            DomainName: !GetAtt FrontendBucket.RegionalDomainName
+            DomainName: !GetAtt FrontendBucketRecreated.RegionalDomainName
             OriginAccessControlId: !GetAtt FrontendOriginAccessControl.Id
             S3OriginConfig: {OriginAccessIdentity: ''}
         DefaultCacheBehavior:
@@ -245,7 +245,7 @@ Resources:
   FrontendBucketPolicy:
     Type: AWS::S3::BucketPolicy
     Properties:
-      Bucket: !Ref FrontendBucket
+      Bucket: !Ref FrontendBucketRecreated
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -253,20 +253,20 @@ Resources:
             Effect: Allow
             Principal: {Service: cloudfront.amazonaws.com}
             Action: s3:GetObject
-            Resource: !Sub ${FrontendBucket.Arn}/*
+            Resource: !Sub ${FrontendBucketRecreated.Arn}/*
             Condition:
               StringEquals:
-                AWS:SourceArn: !Sub arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${FrontendDistribution}
+                AWS:SourceArn: !Sub arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${FrontendDistributionRecreated}
 
 Outputs:
   ApiUrl:
     Value: !Sub https://${RuralShieldApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}
   FrontendBucketName:
-    Value: !Ref FrontendBucket
+    Value: !Ref FrontendBucketRecreated
   FrontendDistributionId:
-    Value: !Ref FrontendDistribution
+    Value: !Ref FrontendDistributionRecreated
   FrontendUrl:
-    Value: !Sub https://${FrontendDistribution.DomainName}
+    Value: !Sub https://${FrontendDistributionRecreated.DomainName}
   ScanTableName:
     Value: !Ref ScanTable
   CognitoUserPoolId:
