@@ -125,6 +125,14 @@ Resources:
             ApiId: !Ref RuralShieldApi
             Path: /scan
             Method: POST
+        AuthenticatedScan:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref RuralShieldApi
+            Path: /scan-authenticated
+            Method: POST
+            Auth:
+              Authorizer: CognitoJwtAuthorizer
         History:
           Type: HttpApi
           Properties:
