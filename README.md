@@ -330,7 +330,8 @@ ruralshield/
 │       ├── bedrock_service.py
 │       ├── risk_engine.py
 │       ├── storage.py
-│       └── config.py
+│       ├── config.py
+│       └── requirements.txt
 │
 ├── frontend/
 │   ├── index.html
