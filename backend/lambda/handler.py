@@ -3,7 +3,7 @@ import logging
 import re
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from bedrock_service import analyze as bedrock_analyze
 from config import ALLOWED_ORIGINS, BEDROCK_PUBLIC_ACCESS
