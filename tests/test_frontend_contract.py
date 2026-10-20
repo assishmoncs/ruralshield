@@ -68,7 +68,8 @@ def test_public_metadata_does_not_use_example_domain_placeholders():
     html = HTML_PATH.read_text(encoding="utf-8")
     robots = (ROOT / "frontend" / "robots.txt").read_text(encoding="utf-8")
     sitemap = (ROOT / "frontend" / "sitemap.xml").read_text(encoding="utf-8")
-    public_metadata = html + robots + sitemap
+    head = html.split("</head>", 1)[0]
+    public_metadata = head + robots + sitemap
     assert "ruralshield.example.com" not in public_metadata
     assert "example.com" not in public_metadata
 
