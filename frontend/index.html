@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#07130d">
+  <meta name="theme-color" content="#f5f7fb">
   <title>RuralShield AI — Banking Phishing & Scam Detection</title>
   
   <!-- SEO Meta Tags -->
@@ -58,13 +58,17 @@
     <span>RuralShield <b>AI</b></span>
   </a>
   <nav aria-label="Primary navigation">
-    <button data-view="scan" type="button" class="nav-active">Scan</button>
+    <button data-view="scan" type="button" class="nav-active" aria-current="page">Scan</button>
     <button data-view="history" type="button">History</button>
     <button data-view="dashboard" type="button">Dashboard</button>
   </nav>
   <div class="header-tools">
     <label class="sr-only" for="language">Language</label>
-    <select id="language" aria-label="Language"></select>
+    <select id="language" aria-label="Interface and scan language"></select>
+    <button id="themeToggle" class="secondary compact theme-toggle" type="button" aria-label="Switch to dark theme" aria-pressed="false" title="Switch to dark theme">
+      <span id="themeIcon" aria-hidden="true">◐</span>
+      <span id="themeLabel" class="theme-label">Dark mode</span>
+    </button>
     <a href="#login" class="secondary compact" id="authAction">Sign in</a>
   </div>
 </header>
@@ -82,6 +86,8 @@
       <span aria-hidden="true">⚠</span>
       <span data-i18n="privacy">Never enter your actual OTP, PIN, password, or complete card details into RuralShield AI.</span>
     </div>
+
+    <p id="scanInputError" class="inline-message hidden" role="alert" aria-live="assertive"></p>
 
     <div class="grid">
       <article class="card">
