@@ -65,7 +65,7 @@ RuralShield AI is a mobile-first, serverless prototype that helps users assess p
 
 **Decision boundary:** Amazon Bedrock does **not** contribute to the final security classification. That decision is based on the ML model, deterministic rules, and passive URL evidence. Bedrock provides contextual explanations and recommendations; it can be disabled or unavailable without preventing the deterministic detection path from producing a verdict.
 
-The interface follows the operating system's light or dark preference by default and provides a manual theme toggle whose choice is saved in the browser. Scan history and statistics require a valid Cognito session. Anonymous scans are not saved to personal history, and feedback is available only when a result was successfully persisted.
+The interface follows the operating system's light or dark preference by default and provides a manual theme toggle whose choice is saved in the browser. Anonymous scans use the public `POST /scan` route and do not use Bedrock when public inference is disabled. Signed-in scans use the Cognito-protected `POST /scan-authenticated` route, allowing Bedrock explanations when configured and saving derived scan metadata to private history when persistence succeeds. Scan history, statistics, and feedback also require a valid Cognito session.
 
 ## Architecture
 
