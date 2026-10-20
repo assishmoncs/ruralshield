@@ -153,7 +153,7 @@ def _scan(event):
     )
     host = url_result.get("features", {}).get("hostname") or ""
     scan_id = str(uuid.uuid4())
-    timestamp = datetime.now(timezone.utc).isoformat()
+    timestamp = datetime.now(UTC).isoformat()
     record = {
         "owner_id": owner_id,
         "scan_key": f"{timestamp}#{scan_id}",
