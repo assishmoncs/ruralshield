@@ -47,11 +47,27 @@ def test_bedrock_iam_allows_profile_and_its_apac_model_regions():
 
 def test_api_preserves_public_scans_and_adds_authenticated_scan_route():
     template = (ROOT / "infrastructure" / "template.yaml").read_text(encoding="utf-8")
-    public_route = template.split("        Scan:\\n", 1)[1].split("        AuthenticatedScan:\\n", 1)[0]
-    authenticated_route = template.split("        AuthenticatedScan:\\n", 1)[1].split("        History:\\n", 1)[0]
 
-    assert "Path: /scan" in public_route
-    assert "Auth:" not in public_route
-    assert "Path: /scan-authenticated" in authenticated_route
-    assert "Authorizer: CognitoJwtAuthorizer" in authenticated_route
+    public_route = (
+        "        Scan:\\n"
+        "          Type: HttpApi\\n"
+        "          Properties:\\n"
+        "            ApiId: !Ref RuralShieldApi\\n"
+        "            Path: /scan\\n"
+        "            Method: POST\\n"
+        "        AuthenticatedScan:\\n"
+    )
+    authenticated_route = (
+        "        AuthenticatedScan:\\n"
+        "          Type: HttpApi\\n"
+        "          Properties:\\n"
+        "            ApiId: !Ref RuralShieldApi\\n"
+        "            Path: /scan-authenticated\\n"
+        "            Method: POST\\n"
+        "            Auth:\\n"
+        "              Authorizer: CognitoJwtAuthorizer"
+    )
+
+    assert public_route in template
+    assert authenticated_route in template
 
