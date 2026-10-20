@@ -1,25 +1,33 @@
 # Security & Privacy
 
-## Threat model
-RuralShield treats scan text and URLs as hostile input. Threats include oversized/malformed requests, prompt injection inside phishing text, secret leakage, malicious URLs, excessive IAM permissions, cross-origin abuse, sensitive logging and malformed AI output.
+## Scope and threat model
+
+RuralShield AI is a research and educational prototype, not a certified banking fraud engine. It treats scan text and URLs as untrusted input. Relevant threats include malformed or oversized requests, phishing/social-engineering content, prompt injection, sensitive data exposure, malicious URLs, cross-origin abuse, excessive IAM permissions, and unexpected model output.
 
 ## Implemented controls
-- Request validation and bounded input sizes.
-- Secret/card/OTP-style redaction before downstream AI/persistence where practical.
-- SHA-256 fingerprinting of sanitized text rather than persistence of raw messages.
-- Passive URL parsing only; no server-side request is made to a submitted URL, preventing the analyzer from becoming an SSRF primitive.
-- Bedrock is supplemental. Its response is parsed defensively and deterministic ML/rule/URL analysis remains usable when Bedrock is unavailable.
-- The prompt explicitly frames submitted content as untrusted data, not instructions.
-- API CORS origin is deployment-configurable; production should use the exact frontend origin.
-- SAM grants DynamoDB access only to the project table and `bedrock:InvokeModel` only for the configured model ARN.
-- No credentials or API keys are stored in source.
-- CloudWatch-compatible logging should contain request IDs, durations, classification/risk and error categories, never raw submitted content or secrets.
 
-## Data minimization
-Stored scan records are intended to contain derived metadata: ID/time, input type, result, scores, language, scam category, reasons/rule IDs, URL domain and sanitized content hash. Raw message bodies are deliberately excluded.
+- **Input validation:** scan and feedback payloads are type-checked, reject unexpected fields, and enforce size and identifier constraints.
+- **Data minimization:** the raw submitted message is not included in the saved scan record. The sanitizer redacts common OTP, password, account-number, and card-number patterns before sending text to Bedrock. Heuristic redaction is not guaranteed to recognize every secret.
+- **Passive URL analysis:** the analyzer parses the submitted string locally. It does not issue HTTP requests to submitted URLs, so the scanner is not intended to act as a server-side URL fetcher. Malformed URL structures produce a bounded risk signal instead of being followed.
+- **Deterministic decision authority:** the final risk score uses the active ML, rules, and URL signals. Amazon Bedrock provides optional contextual explanation and recommended actions; its generated score does not override the deterministic security verdict.
+- **Prompt and output handling:** submitted content is framed as untrusted data in the Bedrock prompt. The response is parsed, category-checked, bounded, and handled with a local fallback when Bedrock is unavailable or responds unexpectedly.
+- **Authenticated private routes:** API Gateway configures Cognito JWT authentication for history, statistics, and feedback. The Lambda handler derives the record owner from the verified ID-token claims, and storage operations are scoped to that owner.
+- **AWS permissions and storage:** the Lambda role is scoped to the project DynamoDB table and configured Bedrock model. DynamoDB enables server-side encryption and point-in-time recovery. The S3 frontend bucket blocks public access and is served through CloudFront Origin Access Control.
+- **Transport and browser controls:** CloudFront provides HTTPS for the frontend. The API CORS origin is deployment-configurable. API responses set no-store caching and defensive browser headers.
+- **Logging:** scan logs capture request identifiers, duration, classification, risk score, persistence state, and service availability rather than the raw message body. Error logs avoid logging model response content or credentials.
 
-## Deployment notes
-S3 website hosting is suitable for a classroom/demo deployment but does not itself provide HTTPS. For a stronger public deployment, place CloudFront with HTTPS in front of a private S3 origin and update the allowed API origin. Authentication is intentionally not faked: if per-user private history is required, add Cognito (or another properly verified identity layer) and enforce ownership server-side before exposing user-specific history.
+## Data retention behavior
 
-## Residual risks
-Redaction is heuristic and cannot guarantee recognition of every secret. ML can misclassify novel scams. LLM explanations can be wrong. Structural URL analysis does not establish reputation or ownership. Treat RuralShield as decision support, not a guarantee.
+Anonymous scans can receive a verdict but are not saved as personal scan history. When a valid authenticated Cognito ID token is supplied, the application attempts to save derived scan metadata such as the result, scores, timestamp, input type, language, category, rule identifiers, and URL hostname. The raw message body is not part of that record. Persistence can fail independently of the detection response; the API reports whether the record was saved.
+
+Do not submit a real OTP, PIN, password, full card number, or other confidential banking credential.
+
+## Residual risks and deployment requirements
+
+- The bundled ML dataset contains only 40 synthetic examples. The reported metrics are development checks, not evidence of production accuracy.
+- URL features are structural heuristics and do not establish domain ownership, reputation, or malicious intent.
+- Redaction is heuristic and can miss sensitive values or redact benign text.
+- AI explanations may be incomplete or wrong and must remain secondary to the deterministic verdict.
+- Public deployment still requires live AWS smoke tests, cost and abuse monitoring, appropriate alarm thresholds, dependency maintenance, accessibility/usability review, and evaluation against a larger licensed real-world dataset.
+
+RuralShield should be treated as decision support, not a guarantee that a message or URL is safe.

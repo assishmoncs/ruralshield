@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#07130d">
+  <meta name="theme-color" content="#f5f7fb">
   <title>RuralShield AI — Banking Phishing & Scam Detection</title>
   
   <!-- SEO Meta Tags -->
@@ -11,22 +11,17 @@
   <meta name="keywords" content="phishing detection, rural banking security, fake kyc, otp scam, upi scam, serverless security, ai fraud prevention, india banking scam">
   <meta name="author" content="RuralShield AI Contributors">
   <meta name="robots" content="index, follow">
-  <link rel="canonical" href="https://ruralshield.example.com">
 
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://ruralshield.example.com">
   <meta property="og:title" content="RuralShield AI — Banking Phishing & Scam Detection">
   <meta property="og:description" content="Privacy-first, explainable phishing-risk detection for rural banking users. Check suspicious SMS or links before you act.">
-  <meta property="og:image" content="https://ruralshield.example.com/og-image.png">
   <meta property="og:locale" content="en_IN">
 
   <!-- Twitter -->
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:url" content="https://ruralshield.example.com">
   <meta name="twitter:title" content="RuralShield AI — Banking Scam Detection">
   <meta name="twitter:description" content="Privacy-first, explainable phishing-risk detection for rural banking users.">
-  <meta name="twitter:image" content="https://ruralshield.example.com/og-image.png">
 
   <!-- Structured Data (JSON-LD) -->
   <script type="application/ld+json">
@@ -35,7 +30,6 @@
     "@type": "WebApplication",
     "name": "RuralShield AI",
     "description": "Privacy-first, explainable AI phishing and scam detection for rural banking users.",
-    "url": "https://ruralshield.example.com",
     "applicationCategory": "SecurityApplication",
     "operatingSystem": "Web",
     "offers": {
@@ -58,14 +52,18 @@
     <span>RuralShield <b>AI</b></span>
   </a>
   <nav aria-label="Primary navigation">
-    <button data-view="scan" type="button" class="nav-active">Scan</button>
+    <button data-view="scan" type="button" class="nav-active" aria-current="page">Scan</button>
     <button data-view="history" type="button">History</button>
     <button data-view="dashboard" type="button">Dashboard</button>
   </nav>
   <div class="header-tools">
     <label class="sr-only" for="language">Language</label>
-    <select id="language" aria-label="Language"></select>
-    <a href="#login" class="secondary compact" id="authAction">Sign in</a>
+    <select id="language" aria-label="Scan language"></select>
+    <button id="themeToggle" class="secondary compact theme-toggle" type="button" aria-label="Switch to dark theme" aria-pressed="false" title="Switch to dark theme">
+      <span id="themeIcon" aria-hidden="true">◐</span>
+      <span id="themeLabel" class="theme-label">Dark mode</span>
+    </button>
+    <button type="button" class="secondary compact" id="authAction">Sign in</button>
   </div>
 </header>
 
@@ -82,6 +80,8 @@
       <span aria-hidden="true">⚠</span>
       <span data-i18n="privacy">Never enter your actual OTP, PIN, password, or complete card details into RuralShield AI.</span>
     </div>
+
+    <p id="scanInputError" class="inline-message hidden" role="alert" aria-live="assertive"></p>
 
     <div class="grid">
       <article class="card">

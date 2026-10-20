@@ -1,39 +1,60 @@
 # Architecture
 
-RuralShield uses a hybrid detector because no single signal is reliable enough for phishing decisions.
+RuralShield uses a hybrid detector because no single signal is reliable enough for phishing-risk assessment.
 
-```text
-Static mobile UI (S3)
-        |
-API Gateway HTTP API
-        |
-Lambda orchestration
-  |       |       |       |
-  ML    Rules    URL    Bedrock
-  |       |       |       |
-  +-------+-------+-------+
-              |
-         Risk engine
-          /       \
-     response   DynamoDB
-                   |
-               CloudWatch logs
-```
+## Request and decision flow
+
+    Browser / mobile UI
+       |-- HTTPS static assets --> CloudFront --> Private S3 (OAC)
+       |
+       |-- HTTPS API calls --> API Gateway HTTP API --> Lambda orchestrator
+                                                        |
+                                  +---------------------+------------------+
+                                  |                     |                  |
+                                  v                     v                  v
+                           TF-IDF + LR           Contextual rules    Passive URL
+                           ML classifier           and mitigations    heuristics
+                                  |                     |                  |
+                                  +---------------------+------------------+
+                                                        |
+                                                        v
+                                          Deterministic risk engine
+                                          (ML + rules + URL only)
+                                                        |
+                                                        v
+                                                Risk verdict + score
+                                                        |
+                                                        +-------------------+
+                                                                            |
+    Lambda orchestrator --> Amazon Bedrock (optional) ---------------------+
+                           explanation and recommended action only
+                                                                            |
+                                                                            v
+                                                             Combined API response
+
+    Authenticated API requests -- Cognito JWT --> API Gateway authorizer
+    Lambda -- derived authenticated scan metadata --> DynamoDB
+    Lambda -- operational metadata logs ----------> CloudWatch
+
+Bedrock is an optional explanation layer. It is not an input to the final security score. If Bedrock is unavailable, the local detection pipeline can still return a verdict and a fallback recommendation.
 
 ## Backend modules
-- `validators.py`: API/input contract and size checks.
-- `sanitizer.py`: redaction and safe fingerprints.
-- `language.py`: lightweight language detection/normalization support.
-- `ml_predictor.py`: serialized model inference with a documented fallback when an artifact is unavailable.
-- `rules.py`: explainable social-engineering signals with IDs/severity/contribution.
-- `url_analyzer.py`: passive structural URL features; never fetches submitted URLs.
-- `bedrock_service.py`: constrained contextual explanation with defensive parsing/fallback.
-- `risk_engine.py`: configurable weighted aggregation and thresholds.
-- `storage.py`: DynamoDB persistence/history/statistics without raw sensitive content.
-- `handler.py`: HTTP routing and orchestration, kept separate from core detectors.
 
-## Failure modes
-Bedrock failure does not prevent a result. DynamoDB failure should not turn a completed detection into an unsafe classification; persistence failure is logged separately. Missing model artifacts degrade the ML signal rather than silently inventing a trained probability. Malformed requests return 4xx errors. Unexpected service failures return sanitized 5xx responses.
+- validators.py: validates scan/feedback input shape, type, size, and IDs.
+- sanitizer.py: redacts common secret patterns before downstream AI processing.
+- language.py: lightweight language detection and normalization support.
+- ml_predictor.py: inference using the serialized TF-IDF/logistic-regression model.
+- rules.py: explainable social-engineering signals with rule IDs and contributions.
+- url_analyzer.py: passive URL parsing and structural risk indicators without fetching URLs.
+- bedrock_service.py: optional contextual explanation, defensive response parsing, and fallback handling.
+- risk_engine.py: deterministic aggregation, thresholds, classification, and qualitative decision-strength label.
+- storage.py: owner-scoped derived scan records, history, statistics, and feedback.
+- handler.py: HTTP routing, orchestration, response generation, and operational logging.
 
-## Performance
-The design uses one small serverless function package, static frontend assets, lazy AWS SDK client reuse and a lightweight linear text model. This keeps deployment understandable while avoiding an unnecessary service graph.
+## Persistence and failure behavior
+
+Only authenticated scans are eligible for personal history persistence. Raw message bodies are not saved in scan records. A persistence failure does not change the calculated verdict; the API reports persistence status separately. Bedrock failures use fallback text rather than blocking the core verdict. Malformed scan requests return client errors. The analyzer never connects to the supplied URL.
+
+## Deployment
+
+The infrastructure is defined in infrastructure/template.yaml using AWS SAM/CloudFormation. The template provisions a private S3 bucket, CloudFront distribution with Origin Access Control, an API Gateway HTTP API, Lambda, DynamoDB, Cognito, and the associated IAM/logging configuration. CI validates the SAM template and builds the Lambda package. This is not a substitute for a live deployment smoke test.

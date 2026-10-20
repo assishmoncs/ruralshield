@@ -65,8 +65,21 @@ def _domain_entropy(label: str) -> float:
 def analyze_url(raw: str):
     if not raw:
         return {"score": 0, "features": {}, "reasons": []}
-    parsed = urlparse(_normalize(raw))
-    host = (parsed.hostname or "").lower().strip(".")
+    try:
+        parsed = urlparse(_normalize(raw))
+        host = (parsed.hostname or "").lower().strip(".")
+    except (ValueError, UnicodeError):
+        return {
+            "score": 35,
+            "features": {"malformed_url": True, "hostname": ""},
+            "reasons": ["The link has a malformed URL structure"],
+        }
+    if not host:
+        return {
+            "score": 35,
+            "features": {"malformed_url": True, "hostname": ""},
+            "reasons": ["The link has a malformed URL structure"],
+        }
     decoded = unquote(raw)
     registrable, subdomain_labels = _registrable_parts(host)
     subdomains = len(subdomain_labels)
@@ -108,7 +121,7 @@ def analyze_url(raw: str):
         points += min(18, 4 * len(keywords))
 
     compact_registrable = re.sub(r"[^a-z0-9]", "", registrable.split(".")[0] if registrable else "")
-    brand_hits = sorted(b for b in BANK_BRANDS if b in lower)
+    brand_hits = sorted(b for b in BANK_BRANDS if b in host)
     exact_brand_domain = any(compact_registrable == b or compact_registrable == b + "bank" for b in BANK_BRANDS)
     if brand_hits and not exact_brand_domain:
         reasons.append("The link mentions a bank brand in a potentially misleading domain")
@@ -122,7 +135,7 @@ def analyze_url(raw: str):
         reasons.append("The domain is one character away from a known banking brand")
         points += 22
 
-    typo_signal = bool(re.search(r"(secure|verify|kyc|login)[-_.]?(sbi|hdfc|icici|axis|kotak)", lower) or re.search(r"(sbi|hdfc|icici|axis|kotak)[-_.]?(secure|verify|kyc|login)", lower))
+    typo_signal = bool(re.search(r"(secure|verify|kyc|login)[-_.]?(sbi|hdfc|icici|axis|kotak)", host) or re.search(r"(sbi|hdfc|icici|axis|kotak)[-_.]?(secure|verify|kyc|login)", host))
     if typo_signal:
         reasons.append("The domain pattern resembles bank impersonation")
         points += 15

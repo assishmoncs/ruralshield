@@ -63,40 +63,33 @@ RuralShield AI is a serverless, mobile-first phishing-risk detection system for 
 
 **Important:** Amazon Bedrock is **not** part of the final security decision. The security decision uses ML + rules + passive URL evidence. Bedrock is a contextual explanation layer and can be disabled/fail without preventing a local security verdict.
 
+The interface follows the device's light/dark preference by default and provides a manual theme toggle whose selection is saved in the browser. Authenticated history and statistics require a valid Cognito session; anonymous scans are not saved, and feedback is only offered when a scan was persisted successfully.
+
 ## 🏛️ Architecture
 
-```text
-Browser / Mobile UI
-        │ HTTPS
-        ▼
-   CloudFront ─────────────► Private S3
-        │
-        ▼
-   API Gateway HTTP API
-        │
-        ▼
-      Lambda
-        │
-   ┌────┼───────────────┐
-   ▼    ▼       ▼       ▼
-  ML   Rules    URL   Bedrock
-   │    │       │    (context only)
-   └────┴───────┘
-          │
-          ▼
-   Deterministic Risk Engine
-          │
-          ├──────────────► API result
-          │
-          ▼
-      DynamoDB
-          │
-          ▼
-     CloudWatch
-
-Cognito JWT ──► authenticated history / statistics / feedback
-IAM ──────────► least-privilege AWS access
+```mermaid
+flowchart TD
+    U[Browser / mobile UI]
+    U -->|HTTPS assets| CF[CloudFront]
+    CF -->|Origin Access Control| S3[Private S3 bucket]
+    U -->|HTTPS API calls| API[API Gateway HTTP API]
+    API --> L[Lambda orchestrator]
+    L --> ML[TF-IDF + Logistic Regression]
+    L --> R[Context-aware rules]
+    L --> URL[Passive URL analyzer]
+    ML --> SCORE[Deterministic risk engine]
+    R --> SCORE
+    URL --> SCORE
+    SCORE --> VERDICT[Classification + risk score]
+    L --> BR[Amazon Bedrock: optional explanation]
+    VERDICT --> RESP[API response]
+    BR --> RESP
+    L --> DDB[DynamoDB: authenticated derived scan metadata]
+    L --> CW[CloudWatch logs]
+    JWT[Cognito JWT] -->|Private routes| API
 ```
+
+**Security boundary:** the risk engine combines ML + rules + passive URL evidence. Bedrock supplies optional explanation/recommendations and does not influence the final security classification.
 
 The frontend bucket is private and delivered through CloudFront using Origin Access Control (OAC). The API never fetches submitted URLs; URL analysis is passive and local.
 
@@ -478,6 +471,7 @@ GitHub Actions verifies:
 - pytest regression suite
 - Python compilation
 - frontend asset and JavaScript syntax checks
+- frontend element-binding contract tests and passive URL edge-case regression tests
 - SAM template validation
 - SAM build
 - Lambda package contents
