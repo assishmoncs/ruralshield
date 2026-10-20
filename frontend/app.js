@@ -235,7 +235,10 @@ function showResult(result) {
   const aiNote = result.bedrock_fallback_reason === 'public_access_disabled'
     ? '<p class="muted">AI explanation is enabled after sign-in; this result used local security signals.</p>'
     : '';
-  const status = (result.classification || 'SUSPICIOUS').toLowerCase();
+  const rawClassification = String(result.classification || 'SUSPICIOUS').toUpperCase();
+  const status = ['SAFE', 'SUSPICIOUS', 'PHISHING'].includes(rawClassification)
+    ? rawClassification.toLowerCase()
+    : 'suspicious';
   const score = Math.max(0, Math.min(100, Math.round(Number(result.risk_score) || 0)));
   const canGiveFeedback = result.persisted === true && Boolean(authToken());
   const feedbackMarkup = canGiveFeedback
@@ -412,7 +415,12 @@ async function loadHistory() {
         </table></div>`
       : '<div class="empty">No scans stored yet.</div>';
   } catch (error) {
-    element.innerHTML = `<div class="empty">${escapeHtml(error.message)}. Sign in is required for private history.</div>`;
+    const detail = error.message || 'Could not load scan history.';
+    const hint = detail.includes('API URL is not configured')
+      ? 'Configure the API endpoint in the deployment runtime configuration.'
+      : 'If your sign-in session expired, sign in again and retry.';
+    element.innerHTML = `<div class="empty"><p>${escapeHtml(detail)}</p><p class="muted">${escapeHtml(hint)}</p><button class="secondary compact" id="retryHistory" type="button">Try again</button></div>`;
+    $('#retryHistory')?.addEventListener('click', loadHistory);
   }
 }
 
@@ -438,7 +446,12 @@ async function loadStats() {
         ${data.statistics_truncated ? '<p class="muted">Statistics are capped for safety.</p>' : ''}
       </div>`;
   } catch (error) {
-    element.innerHTML = `<div class="panel"><div class="empty">${escapeHtml(error.message)}. Sign in is required for private statistics.</div></div>`;
+    const detail = error.message || 'Could not load dashboard statistics.';
+    const hint = detail.includes('API URL is not configured')
+      ? 'Configure the API endpoint in the deployment runtime configuration.'
+      : 'If your sign-in session expired, sign in again and retry.';
+    element.innerHTML = `<div class="panel"><div class="empty"><p>${escapeHtml(detail)}</p><p class="muted">${escapeHtml(hint)}</p><button class="secondary compact" id="retryStats" type="button">Try again</button></div></div>`;
+    $('#retryStats')?.addEventListener('click', loadStats);
   }
 }
 
