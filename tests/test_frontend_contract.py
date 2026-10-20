@@ -63,3 +63,20 @@ def test_theme_language_history_and_auth_controls_are_wired():
     assert 'id="statsContent"' in html and "request('/statistics')" in app
     assert "result.persisted === true" in app
     assert "handleSessionExpired" in app and "function handleSessionExpired()" in auth
+
+def test_public_metadata_does_not_use_example_domain_placeholders():
+    html = HTML_PATH.read_text(encoding="utf-8")
+    robots = (ROOT / "frontend" / "robots.txt").read_text(encoding="utf-8")
+    sitemap = (ROOT / "frontend" / "sitemap.xml").read_text(encoding="utf-8")
+    public_metadata = html + robots + sitemap
+    assert "ruralshield.example.com" not in public_metadata
+    assert "example.com" not in public_metadata
+
+
+def test_themes_respect_saved_choice_and_reduced_motion():
+    app = APP_PATH.read_text(encoding="utf-8")
+    css = (ROOT / "frontend" / "styles.css").read_text(encoding="utf-8")
+    assert "prefers-color-scheme: dark" in app
+    assert "localStorage.setItem(THEME_KEY, currentTheme)" in app
+    assert 'html[data-theme="dark"]' in css
+    assert "prefers-reduced-motion: reduce" in css
