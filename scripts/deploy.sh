@@ -3,7 +3,7 @@ set -euo pipefail
 
 STACK_NAME="${1:-ruralshield-ai}"
 REGION="${AWS_REGION:-ap-south-1}"
-BEDROCK_MODEL_ID="${BEDROCK_MODEL_ID:-amazon.nova-lite-v1:0}"
+BEDROCK_MODEL_ID="${BEDROCK_MODEL_ID:-apac.amazon.nova-lite-v1:0}"
 
 command -v aws >/dev/null || { echo "AWS CLI is required" >&2; exit 1; }
 command -v sam >/dev/null || { echo "AWS SAM CLI is required" >&2; exit 1; }
