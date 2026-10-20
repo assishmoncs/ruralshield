@@ -1,3 +1,2 @@
 User-agent: *
 Allow: /
-Sitemap: https://ruralshield.example.com/sitemap.xml
