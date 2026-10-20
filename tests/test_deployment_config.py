@@ -59,3 +59,17 @@ def test_api_preserves_public_scans_and_adds_authenticated_scan_route():
     assert "Auth:" not in public_route
     assert "Path: /scan-authenticated" in authenticated_route
     assert "Authorizer: CognitoJwtAuthorizer" in authenticated_route
+
+
+def test_deleted_frontend_resources_are_recreated_with_new_logical_ids():
+    template = (ROOT / "infrastructure" / "template.yaml").read_text(encoding="utf-8")
+
+    assert "\n  FrontendBucketRecreated:\n" in template
+    assert "\n  FrontendDistributionRecreated:\n" in template
+    assert "\n  FrontendBucket:\n" not in template
+    assert "\n  FrontendDistribution:\n" not in template
+    assert "!GetAtt FrontendBucketRecreated.RegionalDomainName" in template
+    assert "Bucket: !Ref FrontendBucketRecreated" in template
+    assert "${FrontendBucketRecreated.Arn}/*" in template
+    assert "${FrontendDistributionRecreated}" in template
+    assert "FrontendDistributionRecreated.DomainName" in template
