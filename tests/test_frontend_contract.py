@@ -47,7 +47,7 @@ def test_javascript_id_selectors_match_markup_or_documented_dynamic_elements():
     available_ids = set(parser.ids)
     dynamic_ids = {"feedbackStatus", "retryScan"}
     js = APP_PATH.read_text(encoding="utf-8") + "\n" + AUTH_PATH.read_text(encoding="utf-8")
-    selector_ids = set(re.findall(r"\\$\\(['\"]#([A-Za-z][A-Za-z0-9_-]*)['\"]\\)", js))
+    selector_ids = set(re.findall(r"\$\(['\"]#([A-Za-z][A-Za-z0-9_-]*)['\"]\)", js))
     missing = selector_ids - available_ids - dynamic_ids
     assert not missing, f"JavaScript references missing element IDs: {sorted(missing)}"
 
