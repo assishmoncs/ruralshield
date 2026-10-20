@@ -211,7 +211,7 @@ def lambda_handler(event, context):
     method, path = _route(event)
     if method == "OPTIONS":
         return _response(event, 204, {})
-    if method == "POST" and path.endswith("/scan"):
+    if method == "POST" and path.endswith(("/scan", "/scan-authenticated")):
         return _scan(event)
     if method == "POST" and path.endswith("/feedback"):
         return _feedback(event)
