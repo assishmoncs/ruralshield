@@ -2,6 +2,38 @@ const config = window.RURALSHIELD_CONFIG || {};
 const API = (config.apiUrl || window.RURALSHIELD_API_URL || localStorage.getItem('ruralshield_api') || '').replace(/\/$/, '');
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
+const THEME_KEY = 'ruralshield_theme';
+const LANGUAGE_KEY = 'ruralshield_language';
+
+function applyTheme(theme, persist = false) {
+  const currentTheme = theme === 'dark' ? 'dark' : 'light';
+  document.documentElement.dataset.theme = currentTheme;
+  const metaTheme = $('meta[name="theme-color"]');
+  if (metaTheme) metaTheme.content = currentTheme === 'dark' ? '#111820' : '#f5f7fb';
+  const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  const toggle = $('#themeToggle');
+  const icon = $('#themeIcon');
+  const label = $('#themeLabel');
+  if (icon) icon.textContent = currentTheme === 'dark' ? '☀' : '☾';
+  if (label) label.textContent = nextTheme === 'dark' ? 'Dark mode' : 'Light mode';
+  if (toggle) {
+    toggle.setAttribute('aria-label', `Switch to ${nextTheme} theme`);
+    toggle.setAttribute('title', `Switch to ${nextTheme} theme`);
+    toggle.setAttribute('aria-pressed', String(currentTheme === 'dark'));
+  }
+  if (persist) localStorage.setItem(THEME_KEY, currentTheme);
+}
+function initTheme() {
+  let savedTheme = localStorage.getItem(THEME_KEY);
+  if (savedTheme !== 'light' && savedTheme !== 'dark') {
+    savedTheme = window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  applyTheme(savedTheme);
+  $('#themeToggle')?.addEventListener('click', () => {
+    const current = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+    applyTheme(current === 'dark' ? 'light' : 'dark', true);
+  });
+}
 
 const locales = {
   en: {
@@ -15,6 +47,8 @@ const locales = {
     urlTitle: 'Check a link',
     urlPlaceholder: 'Enter suspicious URL',
     scanUrl: 'CHECK URL',
+    emptyMessage: 'Enter a message to scan.',
+    emptyUrl: 'Enter a URL to scan.',
   },
   hi: {
     eyebrow: 'बैंकिंग धोखाधड़ी जाँच',
@@ -27,6 +61,8 @@ const locales = {
     urlTitle: 'लिंक जाँचें',
     urlPlaceholder: 'संदिग्ध URL दर्ज करें',
     scanUrl: 'URL जाँचें',
+    emptyMessage: 'जाँचने के लिए संदेश दर्ज करें।',
+    emptyUrl: 'जाँचने के लिए URL दर्ज करें।',
   },
   ta: {
     eyebrow: 'வங்கி மோசடி சோதனை',
@@ -39,6 +75,8 @@ const locales = {
     urlTitle: 'இணைப்பைச் சரிபார்க்கவும்',
     urlPlaceholder: 'சந்தேகமான URL',
     scanUrl: 'URL சோதிக்கவும்',
+    emptyMessage: 'சோதிக்க ஒரு செய்தியை உள்ளிடவும்.',
+    emptyUrl: 'சோதிக்க ஒரு URL-ஐ உள்ளிடவும்.',
   },
 };
 
@@ -57,7 +95,10 @@ function applyLocale(language) {
 
 const languageSelect = $('#language');
 [['en', 'English'], ['hi', 'हिन्दी'], ['ta', 'தமிழ்']].forEach(([value, name]) => languageSelect?.add(new Option(name, value)));
-languageSelect?.addEventListener('change', () => applyLocale(languageSelect.value));
+languageSelect?.addEventListener('change', () => {
+  applyLocale(languageSelect.value);
+  localStorage.setItem(LANGUAGE_KEY, languageSelect.value);
+});
 
 /* =========================================
    Router & Transition System
@@ -77,69 +118,48 @@ function authToken() {
   return sessionStorage.getItem('ruralshield_id_token') || '';
 }
 
+let transitionFrame = 0;
+let currentRouteHash = null;
+
 function navigate(rawHash) {
-  const hash = rawHash || '#scan';
-  const viewId = ROUTES[hash] || 'scan';
-
-  // Guard protected routes
+  const hash = Object.prototype.hasOwnProperty.call(ROUTES, rawHash) ? rawHash : '#scan';
+  const viewId = ROUTES[hash];
   if (PROTECTED_ROUTES.has(viewId) && !authToken()) {
-    window.location.hash = '#login';
+    if (window.location.hash !== '#login') window.location.hash = '#login';
     return;
   }
-
-  // Guard auth routes if already authenticated
   if (AUTH_ROUTES.has(viewId) && authToken()) {
-    window.location.hash = '#scan';
+    navigate('#scan');
     return;
   }
-
-  const currentView = $('.view.visible');
-  const targetView = $(`#${viewId}`);
+  if (window.location.hash !== hash) window.history.pushState(null, '', hash);
+  const targetView = document.getElementById(viewId);
   if (!targetView) return;
-
-  // Update nav active indicator
   $$('nav button').forEach((button) => {
-    button.classList.toggle('nav-active', button.dataset.view === viewId);
+    const active = button.dataset.view === viewId;
+    button.classList.toggle('nav-active', active);
+    if (active) button.setAttribute('aria-current', 'page');
+    else button.removeAttribute('aria-current');
   });
-
-  // Smooth transition: fade out current, then activate & fade in new view
-  if (currentView && currentView !== targetView) {
-    currentView.classList.remove('visible');
-    setTimeout(() => {
-      $$('.view').forEach((v) => v.classList.remove('active', 'visible'));
-      targetView.classList.add('active');
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          targetView.classList.add('visible');
-        });
-      });
-      onViewActivated(viewId);
-    }, 180);
-  } else {
-    $$('.view').forEach((v) => v.classList.remove('active', 'visible'));
-    targetView.classList.add('active');
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        targetView.classList.add('visible');
-      });
-    });
-    onViewActivated(viewId);
-  }
-
-  if (window.location.hash !== hash) {
-    window.history.pushState(null, '', hash);
-  }
+  const sameRoute = currentRouteHash === hash && targetView.classList.contains('active');
+  currentRouteHash = hash;
+  if (transitionFrame) cancelAnimationFrame(transitionFrame);
+  $$('.view').forEach((view) => view.classList.remove('active', 'visible'));
+  targetView.classList.add('active');
+  transitionFrame = requestAnimationFrame(() => {
+    transitionFrame = 0;
+    if (targetView.classList.contains('active')) targetView.classList.add('visible');
+  });
+  if (!sameRoute) onViewActivated(viewId);
 }
-
 function onViewActivated(viewId) {
   if (viewId === 'history') loadHistory();
   if (viewId === 'dashboard') loadStats();
 }
 
-window.addEventListener('hashchange', () => navigate(window.location.hash));
-window.navigate = (hash) => {
-  window.location.hash = hash;
-};
+window.addEventListener('hashchange', () => navigate(window.location.hash || '#scan'));
+window.addEventListener('popstate', () => navigate(window.location.hash || '#scan'));
+window.navigate = (hash) => navigate(hash);
 
 $$('nav button').forEach((button) => {
   button.addEventListener('click', () => {
@@ -192,7 +212,10 @@ async function request(path, options = {}) {
   const response = await fetch(API + path, { ...options, headers });
   let body = {};
   try { body = await response.json(); } catch { /* empty */ }
-  if (!response.ok) throw new Error(body.message || body.error || `Request failed (${response.status})`);
+  if (!response.ok) {
+    if (response.status === 401 && token) window.RuralShieldAuth?.handleSessionExpired?.();
+    throw new Error(body.message || body.error || `Request failed (${response.status})`);
+  }
   return body;
 }
 
@@ -213,7 +236,18 @@ function showResult(result) {
     ? '<p class="muted">AI explanation is enabled after sign-in; this result used local security signals.</p>'
     : '';
   const status = (result.classification || 'SUSPICIOUS').toLowerCase();
-  const score = Math.max(0, Math.min(100, Math.round(result.risk_score || 0)));
+  const score = Math.max(0, Math.min(100, Math.round(Number(result.risk_score) || 0)));
+  const canGiveFeedback = result.persisted === true && Boolean(authToken());
+  const feedbackMarkup = canGiveFeedback
+    ? `<div class="feedback" aria-label="Detection feedback">
+        <p><b>Was this result useful?</b></p>
+        <button class="secondary compact" type="button" data-feedback="helpful" data-scan-id="${escapeHtml(result.scan_id || '')}">Yes</button>
+        <button class="secondary compact" type="button" data-feedback="incorrect" data-scan-id="${escapeHtml(result.scan_id || '')}">No / incorrect</button>
+        <span id="feedbackStatus" role="status" aria-live="polite"></span>
+      </div>`
+    : authToken()
+      ? '<p class="muted">This scan could not be saved, so feedback is unavailable for this result.</p>'
+      : '<p class="muted">This anonymous scan was not saved to private history. <a class="link" href="#login">Sign in</a> before future scans to save history and submit feedback.</p>';
 
   const resultContainer = $('#result');
   resultContainer.classList.remove('hidden');
@@ -231,7 +265,7 @@ function showResult(result) {
         <span>Decision strength: ${escapeHtml(result.confidence_level || 'LOW')}</span>
       </div>
     </div>
-    <div class="meter ${status}" aria-label="Risk score meter">
+    <div class="meter ${status}" role="progressbar" aria-label="Risk score" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${score}" aria-valuetext="${score} out of 100">
       <span></span>
     </div>
     <div class="result-grid">
@@ -248,12 +282,7 @@ function showResult(result) {
         <p class="action">${escapeHtml(result.recommendation || 'Do not share sensitive banking credentials. Use an official bank channel if unsure.')}</p>
         <h3>Decision architecture</h3>
         <p>Final risk uses ML + rules + passive URL evidence. Generative AI only adds contextual explanation.</p>
-        <div class="feedback" aria-label="Detection feedback">
-          <p><b>Was this result useful?</b></p>
-          <button class="secondary compact" type="button" data-feedback="helpful" data-scan-id="${escapeHtml(result.scan_id || '')}">Yes</button>
-          <button class="secondary compact" type="button" data-feedback="incorrect" data-scan-id="${escapeHtml(result.scan_id || '')}">No / incorrect</button>
-          <span id="feedbackStatus" role="status"></span>
-        </div>
+${feedbackMarkup}
       </div>
     </div>`;
 
@@ -292,7 +321,19 @@ function showResult(result) {
 }
 
 async function scan(type, value, button) {
-  if (!value.trim()) return;
+  const input = type === 'url' ? $('#url') : $('#message');
+  const cleanValue = typeof value === 'string' ? value.trim() : '';
+  const inputError = $('#scanInputError');
+  if (!cleanValue) {
+    if (inputError) {
+      const language = locales[languageSelect?.value] || locales.en;
+      inputError.textContent = type === 'url' ? language.emptyUrl : language.emptyMessage;
+      inputError.classList.remove('hidden');
+    }
+    input?.focus();
+    return;
+  }
+  if (inputError) inputError.classList.add('hidden');
   button.disabled = true;
   const originalHtml = button.innerHTML;
   button.innerHTML = '<span class="spinner"></span> CHECKING…';
@@ -300,7 +341,7 @@ async function scan(type, value, button) {
   try {
     const result = await request('/scan', {
       method: 'POST',
-      body: JSON.stringify({ type, text: value, language: languageSelect?.value || 'en' }),
+      body: JSON.stringify({ type, text: cleanValue, language: languageSelect?.value || 'en' }),
     });
     showResult(result);
   } catch (error) {
@@ -320,6 +361,18 @@ async function scan(type, value, button) {
 
 $('#scanMessage')?.addEventListener('click', () => scan('message', $('#message')?.value || '', $('#scanMessage')));
 $('#scanUrl')?.addEventListener('click', () => scan('url', $('#url')?.value || '', $('#scanUrl')));
+$('#message')?.addEventListener('input', () => $('#scanInputError')?.classList.add('hidden'));
+$('#url')?.addEventListener('input', () => $('#scanInputError')?.classList.add('hidden'));
+
+function formatTimestamp(value) {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return String(value || '—');
+  const dateLocales = { en: 'en-IN', hi: 'hi-IN', ta: 'ta-IN' };
+  return new Intl.DateTimeFormat(dateLocales[languageSelect?.value] || 'en-IN', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date);
+}
 
 /* =========================================
    History & Statistics
@@ -331,9 +384,9 @@ async function loadHistory() {
 
   try {
     const data = await request('/history');
-    const rows = data.items || [];
+    const rows = Array.isArray(data.items) ? data.items : [];
     element.innerHTML = rows.length
-      ? `<table class="table">
+      ? `<div class="table-wrap"><table class="table">
           <thead>
             <tr>
               <th>TIME</th>
@@ -347,7 +400,7 @@ async function loadHistory() {
           <tbody>
             ${rows.map((row) => `
               <tr>
-                <td>${escapeHtml(row.timestamp)}</td>
+                <td><time datetime="${escapeHtml(row.timestamp)}">${escapeHtml(formatTimestamp(row.timestamp))}</time></td>
                 <td>${escapeHtml(row.input_type)}</td>
                 <td class="badge">${escapeHtml(row.classification)}</td>
                 <td>${escapeHtml(row.risk_score)}</td>
@@ -356,7 +409,7 @@ async function loadHistory() {
               </tr>
             `).join('')}
           </tbody>
-        </table>`
+        </table></div>`
       : '<div class="empty">No scans stored yet.</div>';
   } catch (error) {
     element.innerHTML = `<div class="empty">${escapeHtml(error.message)}. Sign in is required for private history.</div>`;
@@ -392,9 +445,12 @@ async function loadStats() {
 $('#refreshHistory')?.addEventListener('click', loadHistory);
 $('#refreshStats')?.addEventListener('click', loadStats);
 
-// Initialize routing and default locale
+// Initialize preferences before showing the first route.
 document.addEventListener('DOMContentLoaded', () => {
-  applyLocale('en');
+  const savedLanguage = localStorage.getItem(LANGUAGE_KEY);
+  const initialLanguage = Object.prototype.hasOwnProperty.call(locales, savedLanguage) ? savedLanguage : 'en';
+  if (languageSelect) languageSelect.value = initialLanguage;
+  applyLocale(initialLanguage);
   navigate(window.location.hash || '#scan');
   window.RuralShieldAuth?.updateAuthHeader();
 });
