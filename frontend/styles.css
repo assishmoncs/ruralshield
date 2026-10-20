@@ -867,7 +867,7 @@ footer {
   }
   
   .header-tools {
-    margin-left: auto;
+    margin-left: 0;
   }
   
   .header-tools select {
