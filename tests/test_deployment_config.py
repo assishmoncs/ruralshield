@@ -27,6 +27,14 @@ def test_bedrock_deployment_defaults_match_supported_profile():
     assert "BEDROCK_MODEL_ID:-amazon.nova-lite-v1:0" not in shell
 
 
+
+def test_lambda_dependencies_match_local_project_dependencies():
+    local_requirements = (ROOT / "backend" / "requirements.txt").read_text(encoding="utf-8").splitlines()
+    lambda_requirements = (ROOT / "backend" / "lambda" / "requirements.txt").read_text(encoding="utf-8").splitlines()
+
+    assert local_requirements == lambda_requirements
+    assert "boto3>=1.40,<2" in lambda_requirements
+
 def test_bedrock_iam_allows_profile_and_its_apac_model_regions():
     template = (ROOT / "infrastructure" / "template.yaml").read_text(encoding="utf-8")
 
