@@ -68,7 +68,7 @@ def test_theme_language_history_and_auth_controls_are_wired():
 def test_url_input_has_matching_form_control_styles():
     html = HTML_PATH.read_text(encoding="utf-8")
     css = (ROOT / "frontend" / "styles.css").read_text(encoding="utf-8")
-    assert re.search(r'<input\\b(?=[^>]*\\bid="url")(?=[^>]*\\btype="url")[^>]*>', html)
+    assert '<input id="url" type="url"' in html
     assert 'input[type="url"]' in css
 
 
