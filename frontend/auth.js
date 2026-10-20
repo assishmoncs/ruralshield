@@ -31,7 +31,6 @@
       avatar.textContent = (email ? email[0] : 'U').toUpperCase();
       avatar.setAttribute('aria-hidden', 'true');
       authAction.append(avatar, document.createTextNode(' Sign out'));
-      authAction.removeAttribute('href');
       authAction.setAttribute('aria-label', 'Sign out');
       authAction.onclick = (event) => {
         event.preventDefault();
@@ -39,8 +38,10 @@
       };
     } else {
       authAction.textContent = 'Sign in';
-      authAction.setAttribute('href', '#login');
       authAction.setAttribute('aria-label', 'Sign in');
+      authAction.onclick = () => {
+        if (window.navigate) window.navigate('#login');
+      };
     }
   }
   function setAuthenticated(idToken, email = '', accessToken = '') {
