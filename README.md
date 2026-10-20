@@ -352,6 +352,7 @@ ruralshield/
 │
 ├── tests/
 │   ├── test_core.py
+│   ├── test_deployment_config.py
 │   ├── test_edge_cases.py
 │   ├── test_frontend_contract.py
 │   ├── test_integrations.py
@@ -443,11 +444,13 @@ Default region:
 ap-south-1
 ```
 
-Default Bedrock model:
+Default Bedrock inference profile:
 
 ```text
-amazon.nova-lite-v1:0
+apac.amazon.nova-lite-v1:0
 ```
+
+The APAC geographic inference profile can route requests to supported Regions in the APAC geography, including Tokyo, Seoul, Osaka, Mumbai, Singapore, and Sydney. Prompts and outputs are therefore not guaranteed to remain in India. Confirm that this routing meets your data-handling requirements before using the service with sensitive information.
 
 ### Deploy on Windows
 
