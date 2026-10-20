@@ -70,3 +70,5 @@ jobs:
           test -s .aws-sam/build/ScanFunction/handler.py
           test -s .aws-sam/build/ScanFunction/model.json
           test -s .aws-sam/build/ScanFunction/risk_engine.py
+          test -d .aws-sam/build/ScanFunction/boto3
+          test -d .aws-sam/build/ScanFunction/botocore
