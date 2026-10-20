@@ -113,7 +113,7 @@ def statistics(owner_id):
         "scam_categories": categories,
         "recent_detections": rows[:10],
         "statistics_truncated": truncated,
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
     }
 
 
@@ -142,7 +142,7 @@ def save_feedback(owner_id, scan_id, feedback):
             UpdateExpression="SET feedback = :feedback, feedback_at = :timestamp",
             ExpressionAttributeValues={
                 ":feedback": feedback,
-                ":timestamp": datetime.now(timezone.utc).isoformat(),
+                ":timestamp": datetime.now(UTC).isoformat(),
             },
         )
         return True
