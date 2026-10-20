@@ -23,31 +23,33 @@
 
 ---
 
-RuralShield AI is a serverless, mobile-first phishing-risk detection system for rural banking users. It combines a lightweight trained ML model, deterministic social-engineering rules, passive URL heuristics, and optional Amazon Bedrock contextual analysis into a single explainable workflow while minimizing persistent sensitive data.
+RuralShield AI is a mobile-first, serverless prototype that helps users assess phishing risk in banking messages and URLs. It combines a lightweight machine-learning model, deterministic social-engineering rules, passive URL analysis, and optional Amazon Bedrock explanations in one explainable workflow. The system is designed to minimize the amount of sensitive information stored.
 
-> ⚠️ **Safety Notice:** Never enter a real OTP, PIN, password, or complete card number into RuralShield AI. This is a research and educational prototype, not a certified bank fraud engine. Detection is probabilistic.
+> **Safety notice:** Never enter a real OTP, PIN, password, or complete card number into RuralShield AI. This is a research and educational prototype, not a certified banking fraud-detection service. Results are probabilistic and should not replace official bank channels or sound judgment.
 
-## 📋 Table of Contents
+## Table of Contents
 
-- [What It Does](#-what-it-does)
-- [Architecture](#️-architecture)
-- [Tech Stack](#-tech-stack)
-- [Detection Layers](#-detection-layers)
-- [ML Model & Evaluation](#-ml-model--evaluation)
-- [API Reference](#-api-reference)
-- [Privacy Model](#-privacy-model)
-- [Security Controls](#-security-controls)
-- [Multilingual Support](#-multilingual-support)
-- [Repository Layout](#-repository-layout)
-- [Local Development](#-local-development)
-- [AWS Deployment](#-aws-deployment)
-- [CI / Quality Gate](#-ci--quality-gate)
-- [SDG Alignment](#-sdg-alignment)
-- [What Production Deployment Still Requires](#-what-production-deployment-still-requires)
+- [What It Does](#what-it-does)
+- [Architecture](#architecture)
+- [Tech Stack](#tech-stack)
+- [Detection Layers](#detection-layers)
+- [Risk Decision](#risk-decision)
+- [ML Model & Evaluation](#ml-model--evaluation)
+- [API Reference](#api-reference)
+- [Privacy Model](#privacy-model)
+- [Security Controls](#security-controls)
+- [Multilingual Support](#multilingual-support)
+- [Repository Layout](#repository-layout)
+- [Local Development](#local-development)
+- [AWS Deployment](#aws-deployment)
+- [CI / Quality Gate](#ci--quality-gate)
+- [SDG Alignment](#sdg-alignment)
+- [What Production Deployment Still Requires](#what-production-deployment-still-requires)
+- [License](#license)
 
-## 🎯 What It Does
+## What It Does
 
-`POST /scan` accepts a suspicious banking message or URL and returns:
+`POST /scan` accepts a suspicious banking message or URL and returns the following fields:
 
 | Field | Description |
 |---|---|
@@ -61,11 +63,11 @@ RuralShield AI is a serverless, mobile-first phishing-risk detection system for 
 | `components` | ML, URL, rules, and AI observability values |
 | `model_version` | Version of the ML artifact used for the scan |
 
-**Important:** Amazon Bedrock is **not** part of the final security decision. The security decision uses ML + rules + passive URL evidence. Bedrock is a contextual explanation layer and can be disabled/fail without preventing a local security verdict.
+**Decision boundary:** Amazon Bedrock does **not** contribute to the final security classification. That decision is based on the ML model, deterministic rules, and passive URL evidence. Bedrock provides contextual explanations and recommendations; it can be disabled or unavailable without preventing the deterministic detection path from producing a verdict.
 
-The interface follows the device's light/dark preference by default and provides a manual theme toggle whose selection is saved in the browser. Authenticated history and statistics require a valid Cognito session; anonymous scans are not saved, and feedback is only offered when a scan was persisted successfully.
+The interface follows the operating system's light or dark preference by default and provides a manual theme toggle whose choice is saved in the browser. Scan history and statistics require a valid Cognito session. Anonymous scans are not saved to personal history, and feedback is available only when a result was successfully persisted.
 
-## 🏛️ Architecture
+## Architecture
 
 ```mermaid
 flowchart TD
@@ -89,11 +91,11 @@ flowchart TD
     JWT[Cognito JWT] -->|Private routes| API
 ```
 
-**Security boundary:** the risk engine combines ML + rules + passive URL evidence. Bedrock supplies optional explanation/recommendations and does not influence the final security classification.
+**Security boundary:** the risk engine combines the ML score, rule-based signals, and passive URL evidence. Bedrock supplies optional explanations and recommendations; it does not influence the final classification.
 
-The frontend bucket is private and delivered through CloudFront using Origin Access Control (OAC). The API never fetches submitted URLs; URL analysis is passive and local.
+The frontend is stored in a private S3 bucket and delivered through CloudFront using Origin Access Control (OAC). The API does not fetch submitted URLs; URL analysis is passive and performed locally by the backend.
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 ### AWS
 
@@ -126,11 +128,11 @@ The frontend bucket is private and delivered through CloudFront using Origin Acc
 - Fetch API
 - Lightweight localization for English, Hindi, and Tamil
 
-## 🔍 Detection Layers
+## Detection Layers
 
 ### 1. Machine Learning
 
-The current lightweight detector is **TF-IDF + Logistic Regression**, implemented without heavyweight ML dependencies in Lambda. The repository contains the deterministic training pipeline, serialized model artifact, model version metadata, and evaluation output.
+The current detector uses **TF-IDF and Logistic Regression**, with inference designed to avoid heavyweight machine-learning dependencies in Lambda. The repository includes the training pipeline, serialized model artifact, model-version metadata, and evaluation outputs.
 
 ### 2. Rule Engine
 
@@ -148,11 +150,11 @@ Explainable social-engineering rules identify signals such as:
 - fake support
 - bank impersonation
 
-Rules also include mitigating security-awareness signals to reduce obvious false positives such as messages saying that a bank will never ask for an OTP.
+The rules also recognize mitigating security-awareness signals, such as messages reminding users that a bank will never ask them to share an OTP. These signals help reduce obvious false positives.
 
 ### 3. Passive URL Analyzer
 
-The analyzer never visits submitted URLs. It inspects structural indicators such as:
+The analyzer does not open or request submitted URLs. Instead, it checks structural indicators such as:
 
 - IP-address hosts
 - `@` URL confusion
@@ -166,22 +168,22 @@ The analyzer never visits submitted URLs. It inspects structural indicators such
 - suspicious keywords
 - high-entropy domains
 
-These are risk signals, not proof of maliciousness.
+These indicators contribute to a risk assessment; none is conclusive proof that a URL is malicious.
 
 ### 4. Amazon Bedrock
 
-Bedrock uses the sanitized message and structured local evidence to generate:
+Bedrock can use the sanitized message and structured local evidence to generate:
 
 - plain-language summary
 - explanation reasons
 - scam category
 - recommended action
 
-Prompt instructions explicitly treat submitted content as untrusted data. Model output is validated defensively. Bedrock does not override the deterministic security decision.
+Prompt instructions treat submitted content as untrusted data, and model output is validated before use. Bedrock does not override the deterministic security decision.
 
-## 🧮 Risk Decision
+## Risk Decision
 
-The security score uses the active deterministic components:
+The risk score is calculated from the available deterministic components:
 
 ```text
 Risk Score = weighted average of active ML + URL + Rules scores
@@ -195,7 +197,7 @@ URL      25%
 Rules    20%
 ```
 
-The remaining 15% is intentionally **not used by the security decision** because Bedrock is explanation/context only. If ML or URL analysis is unavailable, the active weights are automatically renormalized.
+The configured weights total 85% because the remaining 15% is intentionally **excluded from the security decision**; Bedrock is used only for explanations and context. If the ML model or URL analyzer is unavailable, the weights of the active components are renormalized.
 
 Classification thresholds are configurable:
 
@@ -205,11 +207,11 @@ Classification thresholds are configurable:
 66–100  PHISHING
 ```
 
-`confidence_level` is a qualitative strength indicator and must not be interpreted as a calibrated probability.
+`confidence_level` is a qualitative decision-strength indicator. It is not a calibrated probability and should not be interpreted as one.
 
-## 📊 ML Model & Evaluation
+## ML Model & Evaluation
 
-The repository currently uses a **40-row synthetic demo dataset** solely for deterministic development and CI reproducibility:
+The repository uses a **40-row synthetic demonstration dataset** for development and reproducible CI runs:
 
 - 20 safe examples
 - 20 phishing examples
@@ -227,15 +229,15 @@ Current held-out evaluation is:
 | Phishing recall | 66.67% | 66.67% |
 | Phishing F1 | 80.00% | 80.00% |
 
-These numbers are **not production benchmarks**. The test partition contains only six examples. They should be replaced by evaluation on a larger, license-compatible, deduplicated real-world corpus before making meaningful performance claims.
+These results are **not production benchmarks**: the test partition contains only six examples. Meaningful performance claims require evaluation on a larger, license-compatible, deduplicated real-world dataset.
 
-The repository intentionally keeps the synthetic corpus so CI can reproduce the exact model artifact.
+The synthetic dataset is retained so CI can reproduce the model artifact consistently.
 
-## 📡 API Reference
+## API Reference
 
 ### `POST /scan`
 
-Public scan endpoint. Anonymous scans are allowed, but are not persisted as personal history unless an authenticated Cognito ID token is present.
+Public scan endpoint. Anonymous scans are supported, but their results are not stored as personal history. History persistence requires an authenticated Cognito ID token.
 
 Example request:
 
@@ -247,7 +249,7 @@ Example request:
 }
 ```
 
-The response contains the classification, risk score, qualitative confidence level, reasons, language, scam category, model version, component scores, URL analysis, and whether Bedrock was available.
+The response includes the classification, risk score, qualitative confidence level, reasons, detected language, scam category, model version, component scores, URL-analysis details, and Bedrock availability.
 
 ### `GET /history`
 
@@ -265,22 +267,22 @@ Authenticated endpoint. Records whether a stored result was helpful or incorrect
 
 Public liveness endpoint.
 
-## 🔒 Privacy Model
+## Privacy Model
 
-RuralShield minimizes persistence of sensitive content:
+RuralShield is designed to limit the persistence of sensitive content:
 
 - raw message bodies are not stored
 - only derived scan metadata is persisted
-- obvious OTP/card/password/account patterns are redacted before downstream AI/persistence where practical
+- recognizable OTP, card, password, and account-related patterns are redacted before downstream AI processing or persistence where practical
 - anonymous scans are not persisted as user history
 - authenticated records are owner-scoped by Cognito user ID
 - CloudWatch logging excludes raw message content and secrets
 
 Never enter real banking credentials into the application.
 
-## 🛡️ Security Controls
+## Security Controls
 
-Implemented controls include:
+Implemented security controls include:
 
 - strict request validation and bounded input size
 - private S3 bucket with Public Access Block
@@ -301,7 +303,7 @@ Implemented controls include:
 
 See [`docs/security.md`](docs/security.md) for the threat model and residual risks.
 
-## 🌐 Multilingual Support
+## Multilingual Support
 
 The interface supports:
 
@@ -309,9 +311,9 @@ The interface supports:
 - Hindi (हिन्दी)
 - Tamil (தமிழ்)
 
-This is primarily a UI/localization feature at the current stage. The bundled ML corpus is English-primary and is not sufficient to claim production-quality multilingual phishing detection.
+Multilingual support currently applies primarily to the user interface. The bundled ML dataset is primarily English and is not sufficient to support claims of production-quality phishing detection in Hindi, Tamil, or mixed-language messages.
 
-## 📁 Repository Layout
+## Repository Layout
 
 ```text
 ruralshield/
@@ -351,9 +353,12 @@ ruralshield/
 ├── tests/
 │   ├── test_core.py
 │   ├── test_edge_cases.py
+│   ├── test_frontend_contract.py
 │   ├── test_integrations.py
 │   ├── test_privacy_boundaries.py
 │   ├── test_risk_availability.py
+│   ├── test_security.py
+│   ├── test_url_analyzer_edge_cases.py
 │   └── test_url_intelligence.py
 │
 ├── scripts/
@@ -377,7 +382,7 @@ ruralshield/
 └── README.md
 ```
 
-## 💻 Local Development
+## Local Development
 
 ### Prerequisites
 
@@ -424,7 +429,7 @@ ruff check backend/lambda ml tests
 python -m http.server 8080 -d frontend
 ```
 
-## 🚀 AWS Deployment
+## AWS Deployment
 
 ### Requirements
 
@@ -460,7 +465,7 @@ The deployment scripts build the SAM application, provision AWS resources, confi
 
 > CI validation is not a live AWS smoke test. A deployment should only be called verified after running it in an authorized AWS account and testing `/health`, `/scan`, authentication, history, statistics, and feedback.
 
-## ✅ CI / Quality Gate
+## CI / Quality Gate
 
 GitHub Actions verifies:
 
@@ -476,18 +481,18 @@ GitHub Actions verifies:
 - SAM build
 - Lambda package contents
 
-The current test suite includes **60+ automated tests** across core detection, edge cases, integrations, privacy boundaries, component degradation, and URL intelligence.
+The automated test suite covers core detection, edge cases, integrations, privacy boundaries, component availability, frontend contracts, and URL-analysis behavior.
 
-## 🌍 SDG Alignment
+## SDG Alignment
 
 | Goal | Connection |
 |---|---|
 | **SDG 9 — Industry, Innovation and Infrastructure** | Uses AI/ML, serverless cloud infrastructure, and secure digital services to improve phishing-risk protection for rural banking. |
 | **SDG 10 — Reduced Inequalities** | Focuses on improving digital-safety access for rural and underserved banking users who may face greater digital-literacy barriers. |
 
-## 🔮 What Production Deployment Still Requires
+## What Production Deployment Still Requires
 
-The project is intentionally honest about the remaining gaps:
+The following work remains before the project could be considered for production use:
 
 1. A larger, license-compatible, deduplicated real-world phishing corpus.
 2. Frozen train/validation/test partitions with leakage controls and stronger statistical evaluation.
@@ -498,9 +503,9 @@ The project is intentionally honest about the remaining gaps:
 7. WAF/advanced abuse protection, CloudWatch alarms, SLOs, and operational runbooks for a public deployment.
 8. Broader usability/accessibility validation with the intended rural audience.
 
-These requirements cannot be honestly substituted with fabricated metrics or synthetic evidence.
+Synthetic data and unverified metrics are not substitutes for this validation.
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License. See [LICENSE](LICENSE).
 
