@@ -121,7 +121,7 @@ function authToken() {
 let transitionFrame = 0;
 let currentRouteHash = null;
 
-function navigate(rawHash) {
+function navigateTo(rawHash) {
   const hash = Object.prototype.hasOwnProperty.call(ROUTES, rawHash) ? rawHash : '#scan';
   const viewId = ROUTES[hash];
   if (PROTECTED_ROUTES.has(viewId) && !authToken()) {
@@ -129,7 +129,7 @@ function navigate(rawHash) {
     return;
   }
   if (AUTH_ROUTES.has(viewId) && authToken()) {
-    navigate('#scan');
+    navigateTo('#scan');
     return;
   }
   if (window.location.hash !== hash) window.history.pushState(null, '', hash);
@@ -157,13 +157,13 @@ function onViewActivated(viewId) {
   if (viewId === 'dashboard') loadStats();
 }
 
-window.addEventListener('hashchange', () => navigate(window.location.hash || '#scan'));
-window.addEventListener('popstate', () => navigate(window.location.hash || '#scan'));
-window.navigate = (hash) => navigate(hash);
+window.addEventListener('hashchange', () => navigateTo(window.location.hash || '#scan'));
+window.addEventListener('popstate', () => navigateTo(window.location.hash || '#scan'));
+window.navigate = navigateTo;
 
 $$('nav button').forEach((button) => {
   button.addEventListener('click', () => {
-    navigate(`#${button.dataset.view}`);
+    navigateTo(`#${button.dataset.view}`);
   });
 });
 
@@ -466,6 +466,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const initialLanguage = Object.prototype.hasOwnProperty.call(locales, savedLanguage) ? savedLanguage : 'en';
   if (languageSelect) languageSelect.value = initialLanguage;
   applyLocale(initialLanguage);
-  navigate(window.location.hash || '#scan');
+  navigateTo(window.location.hash || '#scan');
   window.RuralShieldAuth?.updateAuthHeader();
 });
