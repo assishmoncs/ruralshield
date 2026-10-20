@@ -342,7 +342,8 @@ async function scan(type, value, button) {
   button.innerHTML = '<span class="spinner"></span> CHECKING…';
 
   try {
-    const result = await request('/scan', {
+    const scanPath = authToken() ? '/scan-authenticated' : '/scan';
+    const result = await request(scanPath, {
       method: 'POST',
       body: JSON.stringify({ type, text: cleanValue, language: languageSelect?.value || 'en' }),
     });
