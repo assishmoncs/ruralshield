@@ -67,38 +67,29 @@ The interface follows the device's light/dark preference by default and provides
 
 ## 🏛️ Architecture
 
-```text
-Browser / Mobile UI
-        │ HTTPS
-        ▼
-   CloudFront ─────────────► Private S3
-        │
-        ▼
-   API Gateway HTTP API
-        │
-        ▼
-      Lambda
-        │
-   ┌────┼───────────────┐
-   ▼    ▼       ▼       ▼
-  ML   Rules    URL   Bedrock
-   │    │       │    (context only)
-   └────┴───────┘
-          │
-          ▼
-   Deterministic Risk Engine
-          │
-          ├──────────────► API result
-          │
-          ▼
-      DynamoDB
-          │
-          ▼
-     CloudWatch
-
-Cognito JWT ──► authenticated history / statistics / feedback
-IAM ──────────► least-privilege AWS access
+```mermaid
+flowchart TD
+    U[Browser / mobile UI]
+    U -->|HTTPS assets| CF[CloudFront]
+    CF -->|Origin Access Control| S3[Private S3 bucket]
+    U -->|HTTPS API calls| API[API Gateway HTTP API]
+    API --> L[Lambda orchestrator]
+    L --> ML[TF-IDF + Logistic Regression]
+    L --> R[Context-aware rules]
+    L --> URL[Passive URL analyzer]
+    ML --> SCORE[Deterministic risk engine]
+    R --> SCORE
+    URL --> SCORE
+    SCORE --> VERDICT[Classification + risk score]
+    L --> BR[Amazon Bedrock: optional explanation]
+    VERDICT --> RESP[API response]
+    BR --> RESP
+    L --> DDB[DynamoDB: authenticated derived scan metadata]
+    L --> CW[CloudWatch logs]
+    JWT[Cognito JWT] -->|Private routes| API
 ```
+
+**Security boundary:** the risk engine combines ML + rules + passive URL evidence. Bedrock supplies optional explanation/recommendations and does not influence the final security classification.
 
 The frontend bucket is private and delivered through CloudFront using Origin Access Control (OAC). The API never fetches submitted URLs; URL analysis is passive and local.
 
