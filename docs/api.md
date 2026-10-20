@@ -1,6 +1,6 @@
 # RuralShield API
 
-The API is a small HTTP API behind Amazon API Gateway and AWS Lambda. Scan requests are public so a user can check a message before signing in; personal history, statistics, and feedback are authenticated with a Cognito JWT authorizer.
+The API is a small HTTP API behind Amazon API Gateway and AWS Lambda. Anonymous scans use the public `POST /scan` route. Signed-in users use `POST /scan-authenticated`, protected by the Cognito JWT authorizer; this lets the backend recognize the verified user, enable Bedrock explanations when configured, and save derived metadata to that user's history. Personal history, statistics, and feedback are also protected by the Cognito JWT authorizer.
 
 ## POST /scan
 
@@ -55,6 +55,10 @@ The response includes:
 The security decision uses ML + rules + passive URL evidence. Amazon Bedrock is a contextual explanation layer and does not control the final classification.
 
 Invalid or oversized requests return HTTP 400. Protected endpoints return HTTP 401 without a valid Cognito JWT. Internal service errors are sanitized for clients.
+
+## POST /scan-authenticated
+
+**Authentication required.** Uses the same request and response schema as `POST /scan`. The Cognito JWT authorizer validates the ID token before the request reaches Lambda. Signed-in scans can use the Bedrock explanation layer when configured and can be saved to the authenticated user's history.
 
 ## GET /history
 
