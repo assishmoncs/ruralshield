@@ -57,6 +57,7 @@ def test_theme_language_history_and_auth_controls_are_wired():
     app = APP_PATH.read_text(encoding="utf-8")
     auth = AUTH_PATH.read_text(encoding="utf-8")
     assert 'id="themeToggle"' in html and "initTheme();" in app
+    assert '<button type="button" class="secondary compact" id="authAction">' in html
     assert 'id="language"' in html and "applyLocale(initialLanguage)" in app
     assert 'id="historyContent"' in html and "request('/history')" in app
     assert 'id="statsContent"' in html and "request('/statistics')" in app
