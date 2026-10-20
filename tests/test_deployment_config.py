@@ -44,3 +44,14 @@ def test_bedrock_iam_allows_profile_and_its_apac_model_regions():
     for region in REGIONS:
         expected = f"bedrock:{region}::foundation-model/amazon.nova-lite-v1:0"
         assert expected in template
+
+def test_api_preserves_public_scans_and_adds_authenticated_scan_route():
+    template = (ROOT / "infrastructure" / "template.yaml").read_text(encoding="utf-8")
+    public_route = template.split("        Scan:\\n", 1)[1].split("        AuthenticatedScan:\\n", 1)[0]
+    authenticated_route = template.split("        AuthenticatedScan:\\n", 1)[1].split("        History:\\n", 1)[0]
+
+    assert "Path: /scan" in public_route
+    assert "Auth:" not in public_route
+    assert "Path: /scan-authenticated" in authenticated_route
+    assert "Authorizer: CognitoJwtAuthorizer" in authenticated_route
+
