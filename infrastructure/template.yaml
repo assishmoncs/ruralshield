@@ -7,7 +7,10 @@ Parameters:
     Default: http://localhost:8080
   BedrockModelId:
     Type: String
-    Default: amazon.nova-lite-v1:0
+    Default: apac.amazon.nova-lite-v1:0
+    AllowedValues:
+      - apac.amazon.nova-lite-v1:0
+    Description: APAC geographic inference profile for Nova Lite.
   BedrockPublicAccess:
     Type: String
     Default: 'false'
@@ -97,10 +100,24 @@ Resources:
                 - dynamodb:Query
                 - dynamodb:UpdateItem
               Resource: !GetAtt ScanTable.Arn
-            - Sid: InvokeConfiguredBedrockModel
+            - Sid: InvokeNovaLiteInferenceProfile
               Effect: Allow
               Action: bedrock:InvokeModel
-              Resource: !Sub arn:${AWS::Partition}:bedrock:${AWS::Region}::foundation-model/${BedrockModelId}
+              Resource:
+                - !Sub arn:${AWS::Partition}:bedrock:${AWS::Region}:${AWS::AccountId}:inference-profile/${BedrockModelId}
+            - Sid: InvokeNovaLiteRegionalModels
+              Effect: Allow
+              Action: bedrock:InvokeModel
+              Resource:
+                - !Sub arn:${AWS::Partition}:bedrock:ap-northeast-1::foundation-model/amazon.nova-lite-v1:0
+                - !Sub arn:${AWS::Partition}:bedrock:ap-northeast-2::foundation-model/amazon.nova-lite-v1:0
+                - !Sub arn:${AWS::Partition}:bedrock:ap-northeast-3::foundation-model/amazon.nova-lite-v1:0
+                - !Sub arn:${AWS::Partition}:bedrock:ap-south-1::foundation-model/amazon.nova-lite-v1:0
+                - !Sub arn:${AWS::Partition}:bedrock:ap-southeast-1::foundation-model/amazon.nova-lite-v1:0
+                - !Sub arn:${AWS::Partition}:bedrock:ap-southeast-2::foundation-model/amazon.nova-lite-v1:0
+              Condition:
+                StringEquals:
+                  bedrock:InferenceProfileArn: !Sub arn:${AWS::Partition}:bedrock:${AWS::Region}:${AWS::AccountId}:inference-profile/${BedrockModelId}
       Events:
         Scan:
           Type: HttpApi
