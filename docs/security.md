@@ -28,6 +28,7 @@ Do not submit a real OTP, PIN, password, full card number, or other confidential
 - URL features are structural heuristics and do not establish domain ownership, reputation, or malicious intent.
 - Redaction is heuristic and can miss sensitive values or redact benign text.
 - AI explanations may be incomplete or wrong and must remain secondary to the deterministic verdict.
+- **Inference geography:** The configured APAC Nova Lite profile may route inference requests to supported Regions including Tokyo, Seoul, Osaka, Mumbai, Singapore, and Sydney. Sanitization is heuristic, so prompts are not guaranteed to remain in India; do not submit real credentials, and confirm this routing meets applicable data-residency requirements.
 - Public deployment still requires live AWS smoke tests, cost and abuse monitoring, appropriate alarm thresholds, dependency maintenance, accessibility/usability review, and evaluation against a larger licensed real-world dataset.
 
 RuralShield should be treated as decision support, not a guarantee that a message or URL is safe.
