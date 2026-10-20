@@ -203,8 +203,24 @@
     }
   }
 
+  function revokeCognitoSession(accessToken) {
+    if (!accessToken || !region) return;
+    fetch(`https://cognito-idp.${region}.amazonaws.com/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-amz-json-1.1',
+        'X-Amz-Target': 'AWSCognitoIdentityProviderService.GlobalSignOut',
+      },
+      body: JSON.stringify({ AccessToken: accessToken }),
+    }).catch(() => {
+      // Local sign-out has already completed; server revocation is best effort.
+    });
+  }
+
   function signOut() {
+    const accessToken = sessionStorage.getItem('ruralshield_access_token') || '';
     clearAuthenticated();
+    revokeCognitoSession(accessToken);
     setMessage('#loginMessage', 'You have been signed out on this device.', 'info');
     if (window.navigate) window.navigate('#login');
   }
