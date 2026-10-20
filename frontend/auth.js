@@ -22,24 +22,30 @@
 
     const token = sessionStorage.getItem(tokenKey);
     const email = sessionStorage.getItem('ruralshield_user_email') || '';
+    authAction.onclick = null;
+    authAction.textContent = '';
 
     if (token) {
-      const initial = (email ? email[0] : 'U').toUpperCase();
-      authAction.innerHTML = `<span class="user-avatar">${initial}</span> Sign out`;
+      const avatar = document.createElement('span');
+      avatar.className = 'user-avatar';
+      avatar.textContent = (email ? email[0] : 'U').toUpperCase();
+      avatar.setAttribute('aria-hidden', 'true');
+      authAction.append(avatar, document.createTextNode(' Sign out'));
       authAction.removeAttribute('href');
-      authAction.onclick = (e) => {
-        e.preventDefault();
+      authAction.setAttribute('aria-label', 'Sign out');
+      authAction.onclick = (event) => {
+        event.preventDefault();
         signOut();
       };
     } else {
-      authAction.innerHTML = 'Sign in';
+      authAction.textContent = 'Sign in';
       authAction.setAttribute('href', '#login');
-      authAction.onclick = null;
+      authAction.setAttribute('aria-label', 'Sign in');
     }
   }
-
-  function setAuthenticated(idToken, email = '') {
+  function setAuthenticated(idToken, email = '', accessToken = '') {
     sessionStorage.setItem(tokenKey, idToken);
+    if (accessToken) sessionStorage.setItem('ruralshield_access_token', accessToken);
     if (email) sessionStorage.setItem('ruralshield_user_email', email);
     updateAuthHeader();
     if (window.navigate) {
@@ -82,8 +88,14 @@
     if (!email || !password) {
       return setMessage('#signupMessage', 'Please provide both email and password.', 'error');
     }
-    if (password.length < MIN_PASSWORD_LENGTH) {
-      return setMessage('#signupMessage', `Password must contain at least ${MIN_PASSWORD_LENGTH} characters.`, 'error');
+    if (!$('#signupEmail')?.checkValidity()) {
+      return setMessage('#signupMessage', 'Enter a valid email address.', 'error');
+    }
+    const strongPassword = password.length >= MIN_PASSWORD_LENGTH &&
+      /[A-Z]/.test(password) && /[a-z]/.test(password) &&
+      /[0-9]/.test(password) && /[^A-Za-z0-9]/.test(password);
+    if (!strongPassword) {
+      return setMessage('#signupMessage', 'Use at least 12 characters with uppercase and lowercase letters, a number, and a symbol.', 'error');
     }
 
     if (submitBtn) {
@@ -162,6 +174,9 @@
     if (!email || !password) {
       return setMessage('#loginMessage', 'Please enter your email and password.', 'error');
     }
+    if (!$('#loginEmail')?.checkValidity()) {
+      return setMessage('#loginMessage', 'Enter a valid email address.', 'error');
+    }
 
     if (submitBtn) {
       submitBtn.disabled = true;
@@ -175,8 +190,9 @@
       });
       const idToken = result.AuthenticationResult?.IdToken;
       if (!idToken) throw new Error('Authentication succeeded but no ID token was returned.');
+      const accessToken = result.AuthenticationResult?.AccessToken || '';
       setMessage('#loginMessage', '', 'info');
-      setAuthenticated(idToken, email);
+      setAuthenticated(idToken, email, accessToken);
     } catch (error) {
       setMessage('#loginMessage', error.message, 'error');
     } finally {
@@ -189,10 +205,14 @@
 
   function signOut() {
     clearAuthenticated();
-    setMessage('#loginMessage', 'You have been signed out.', 'info');
-    if (window.navigate) {
-      window.navigate('#login');
-    }
+    setMessage('#loginMessage', 'You have been signed out on this device.', 'info');
+    if (window.navigate) window.navigate('#login');
+  }
+
+  function handleSessionExpired() {
+    clearAuthenticated();
+    setMessage('#loginMessage', 'Your session has expired. Please sign in again.', 'error');
+    if (window.navigate) window.navigate('#login');
   }
 
   function setupPasswordToggles() {
@@ -231,6 +251,7 @@
     isAuthenticated: () => Boolean(sessionStorage.getItem(tokenKey)),
     getToken: () => sessionStorage.getItem(tokenKey) || '',
     getUserEmail: () => sessionStorage.getItem('ruralshield_user_email') || '',
+    handleSessionExpired,
     updateAuthHeader,
   };
 
