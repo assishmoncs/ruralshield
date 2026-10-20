@@ -64,6 +64,14 @@ def test_theme_language_history_and_auth_controls_are_wired():
     assert "result.persisted === true" in app
     assert "handleSessionExpired" in app and "function handleSessionExpired()" in auth
 
+
+def test_url_input_has_matching_form_control_styles():
+    html = HTML_PATH.read_text(encoding="utf-8")
+    css = (ROOT / "frontend" / "styles.css").read_text(encoding="utf-8")
+    assert re.search(r'<input\\b(?=[^>]*\\bid="url")(?=[^>]*\\btype="url")[^>]*>', html)
+    assert 'input[type="url"]' in css
+
+
 def test_public_metadata_does_not_use_example_domain_placeholders():
     html = HTML_PATH.read_text(encoding="utf-8")
     robots = (ROOT / "frontend" / "robots.txt").read_text(encoding="utf-8")
