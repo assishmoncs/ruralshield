@@ -65,6 +65,12 @@ def test_theme_language_history_and_auth_controls_are_wired():
     assert "handleSessionExpired" in app and "function handleSessionExpired()" in auth
 
 
+
+def test_scans_choose_authenticated_route_when_signed_in():
+    app = APP_PATH.read_text(encoding="utf-8")
+    assert "const scanPath = authToken() ? '/scan-authenticated' : '/scan';" in app
+    assert "request(scanPath, {" in app
+
 def test_url_input_has_matching_form_control_styles():
     html = HTML_PATH.read_text(encoding="utf-8")
     css = (ROOT / "frontend" / "styles.css").read_text(encoding="utf-8")
